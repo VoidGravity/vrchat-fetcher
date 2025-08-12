@@ -118,8 +118,9 @@ class VRChatFetcher {
         });
     }
 
-    async authenticate() {
-        console.log('Authenticating with VRChat...');
+    async authenticate(retryCount = 0, maxRetries = 5) {
+        const attempt = retryCount + 1;
+        console.log(`Authenticating with VRChat... (attempt ${attempt}/${maxRetries + 1})`);
         
         if (!this.credentials.username || !this.credentials.password) {
             throw new Error('Username and password must be set in environment variables');
@@ -141,15 +142,47 @@ class VRChatFetcher {
                 console.log('Authentication successful');
                 return true;
             } else if (response.status === 401) {
-                console.error('Authentication failed:', response.data);
-                throw new Error('Invalid credentials or 2FA required');
+                console.error('Authentication failed - Invalid credentials or 2FA required:', response.data);
+                if (retryCount < maxRetries) {
+                    const waitTime = Math.min(30000 * Math.pow(2, retryCount), 300000); // Cap at 5 minutes
+                    console.log(`Retrying authentication in ${waitTime / 1000} seconds...`);
+                    await this.sleep(waitTime);
+                    return this.authenticate(retryCount + 1, maxRetries);
+                }
+                throw new Error('Invalid credentials or 2FA required - max retries exceeded');
+            } else if (response.status === 429) {
+                console.error('Rate limited during authentication:', response.data);
+                if (retryCount < maxRetries) {
+                    // For 429, wait longer with exponential backoff
+                    const waitTime = Math.min(300000 * Math.pow(1.5, retryCount), 900000); // Start at 5min, cap at 15min
+                    console.log(`Rate limited - waiting ${waitTime / 1000} seconds before retry...`);
+                    await this.sleep(waitTime);
+                    return this.authenticate(retryCount + 1, maxRetries);
+                }
+                throw new Error('Rate limit exceeded - max retries exceeded');
             } else {
-                console.error('Unexpected response:', response);
-                throw new Error(`Authentication failed with status ${response.status}`);
+                console.error('Unexpected authentication response:', response);
+                if (retryCount < maxRetries) {
+                    const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000); // Start at 1min, cap at 5min
+                    console.log(`Unexpected response - retrying in ${waitTime / 1000} seconds...`);
+                    await this.sleep(waitTime);
+                    return this.authenticate(retryCount + 1, maxRetries);
+                }
+                throw new Error(`Authentication failed with status ${response.status} - max retries exceeded`);
             }
         } catch (error) {
-            console.error('Authentication error:', error);
-            throw error;
+            if (error.message.includes('max retries exceeded')) {
+                throw error; // Don't retry if we've already exceeded max retries
+            }
+            
+            console.error('Authentication network error:', error.message);
+            if (retryCount < maxRetries) {
+                const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000);
+                console.log(`Network error - retrying in ${waitTime / 1000} seconds...`);
+                await this.sleep(waitTime);
+                return this.authenticate(retryCount + 1, maxRetries);
+            }
+            throw new Error(`Authentication network error - max retries exceeded: ${error.message}`);
         }
     }
 
@@ -193,13 +226,27 @@ class VRChatFetcher {
         console.log(`Starting ${folderName} data fetch at ${startTime.toISOString()}`);
 
         try {
-            // Ensure we have valid authentication
+            // Ensure we have valid authentication with retry logic
             if (!this.authCookie) {
-                await this.authenticate();
+                console.log('No auth cookie found, attempting to authenticate...');
+                try {
+                    await this.authenticate();
+                } catch (authError) {
+                    console.error('Failed to authenticate after all retries:', authError.message);
+                    console.log('Scheduling retry in 10 minutes...');
+                    setTimeout(() => {
+                        if (!this.manualTrigger) { // Only reschedule if it was an automatic run
+                            console.log('Retrying fetch after authentication failure...');
+                            this.fetchAllData().catch(console.error);
+                        }
+                    }, 600000); // 10 minutes
+                    return;
+                }
             }
 
             const allResults = {};
             let totalRequests = 0;
+            let hasErrors = false;
 
             for (const sort of this.sortTypes) {
                 console.log(`Fetching data for sort: ${sort}`);
@@ -222,15 +269,23 @@ class VRChatFetcher {
                                 await this.sleep(2000);
                             }
                         } else if (response.status === 429) {
-                            console.log('Rate limited, waiting 30 seconds...');
+                            console.log('Rate limited during fetch, waiting 30 seconds...');
                             await this.sleep(30000);
                             page--; // Retry this page
                             continue;
                         } else {
                             console.error(`Failed to fetch ${sort} page ${page + 1}:`, response);
+                            hasErrors = true;
                         }
                     } catch (error) {
-                        console.error(`Error fetching ${sort} page ${page + 1}:`, error);
+                        console.error(`Error fetching ${sort} page ${page + 1}:`, error.message);
+                        hasErrors = true;
+                        
+                        // If it's an authentication error, try to re-auth
+                        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                            console.log('Authentication may have expired, clearing cookie...');
+                            this.authCookie = '';
+                        }
                     }
                 }
 
@@ -242,7 +297,7 @@ class VRChatFetcher {
                 }
             }
 
-            // Save results
+            // Save results even if there were some errors
             const filename = `vrchat_worlds_${timestamp}.json`;
             const filepath = path.join('data', folderName, filename);
             
@@ -250,6 +305,7 @@ class VRChatFetcher {
                 timestamp: startTime.toISOString(),
                 totalRequests,
                 type: folderName,
+                hasErrors,
                 data: allResults,
                 summary: {
                     popularity: allResults.popularity?.length || 0,
@@ -262,15 +318,30 @@ class VRChatFetcher {
             console.log(`Data saved to ${filepath}`);
             
             // Save summary log
-            const logEntry = `${startTime.toISOString()}: ${folderName} fetch completed - ${totalRequests} requests, ${result.summary.popularity + result.summary.heat + result.summary.hotness} total worlds\n`;
+            const errorFlag = hasErrors ? ' (with errors)' : '';
+            const logEntry = `${startTime.toISOString()}: ${folderName} fetch completed${errorFlag} - ${totalRequests} requests, ${result.summary.popularity + result.summary.heat + result.summary.hotness} total worlds\n`;
             fs.appendFileSync(path.join('data', 'fetch_log.txt'), logEntry);
 
+            if (hasErrors) {
+                console.log('Fetch completed with some errors - check individual results');
+            }
+
         } catch (error) {
-            console.error('Fetch failed:', error);
+            console.error('Fetch failed with unhandled error:', error.message);
+            
+            // For automatic runs, schedule a retry
+            if (!this.manualTrigger) {
+                console.log('Scheduling retry in 15 minutes due to unhandled error...');
+                setTimeout(() => {
+                    console.log('Retrying fetch after unhandled error...');
+                    this.fetchAllData().catch(console.error);
+                }, 900000); // 15 minutes
+            }
         } finally {
             this.isRunning = false;
             this.manualTrigger = false;
-            console.log(`Fetch completed in ${Date.now() - startTime.getTime()}ms`);
+            const duration = Date.now() - startTime.getTime();
+            console.log(`Fetch process completed in ${duration}ms`);
         }
     }
 
@@ -299,23 +370,27 @@ class VRChatFetcher {
         console.log('- Username set:', !!this.credentials.username);
         console.log('- Password set:', !!this.credentials.password);
         
-        // Initial authentication
-        this.authenticate().catch(console.error);
+        // Don't authenticate immediately, let the first fetch handle it with retry logic
+        console.log('Authentication will be handled on first fetch attempt');
         
         // Schedule hourly fetches
         const runFetch = () => {
-            this.fetchAllData().catch(console.error);
+            this.fetchAllData().catch(error => {
+                console.error('Scheduled fetch error:', error.message);
+                // Error handling is now managed within fetchAllData
+            });
         };
 
-        // Run immediately if not in manual mode
+        // Run immediately if not disabled (with retry logic built in)
         if (process.env.IMMEDIATE_START !== 'false') {
-            setTimeout(runFetch, 5000); // Wait 5 seconds for server to start
+            console.log('Starting initial fetch in 10 seconds...');
+            setTimeout(runFetch, 10000); // Wait 10 seconds for server to fully start
         }
 
         // Schedule every hour
         setInterval(runFetch, 60 * 60 * 1000);
         
-        console.log('Scheduled to run every hour');
+        console.log('Scheduled to run every hour with automatic retry on failures');
     }
 }
 
