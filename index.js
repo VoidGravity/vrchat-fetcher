@@ -15,6 +15,7 @@ class VRChatFetcher {
         this.sortTypes = ['popularity', 'heat', 'hotness'];
         this.isRunning = false;
         this.manualTrigger = false;
+        this.waitingFor2FA = false;
         
         // Create data directories
         this.ensureDirectories();
@@ -36,12 +37,23 @@ class VRChatFetcher {
         const server = http.createServer((req, res) => {
             res.setHeader('Content-Type', 'application/json');
             res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+            
+            // Handle preflight requests
+            if (req.method === 'OPTIONS') {
+                res.writeHead(200);
+                res.end();
+                return;
+            }
             
             if (req.method === 'GET' && req.url === '/status') {
                 res.writeHead(200);
                 res.end(JSON.stringify({
                     status: 'running',
                     isRunning: this.isRunning,
+                    waitingFor2FA: this.waitingFor2FA || false,
+                    hasAuthCookie: !!this.authCookie,
                     lastRun: this.getLastRunTime()
                 }));
             } else if (req.method === 'POST' && req.url === '/trigger') {
@@ -54,6 +66,37 @@ class VRChatFetcher {
                     res.writeHead(429);
                     res.end(JSON.stringify({ message: 'Fetch already in progress' }));
                 }
+            } else if (req.method === 'POST' && req.url === '/2fa') {
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk.toString();
+                });
+                req.on('end', () => {
+                    try {
+                        const data = JSON.parse(body);
+                        if (data.code && typeof data.code === 'string') {
+                            this.submit2FACode(data.code).then(success => {
+                                res.writeHead(200);
+                                res.end(JSON.stringify({ 
+                                    success, 
+                                    message: success ? '2FA code verified successfully' : '2FA code verification failed'
+                                }));
+                            }).catch(error => {
+                                res.writeHead(400);
+                                res.end(JSON.stringify({ 
+                                    success: false, 
+                                    message: error.message 
+                                }));
+                            });
+                        } else {
+                            res.writeHead(400);
+                            res.end(JSON.stringify({ message: 'Invalid request. Send {"code":"123456"}' }));
+                        }
+                    } catch (error) {
+                        res.writeHead(400);
+                        res.end(JSON.stringify({ message: 'Invalid JSON' }));
+                    }
+                });
             } else {
                 res.writeHead(404);
                 res.end(JSON.stringify({ message: 'Not found' }));
@@ -63,8 +106,9 @@ class VRChatFetcher {
         const port = process.env.PORT || 3000;
         server.listen(port, () => {
             console.log(`Server running on port ${port}`);
-            console.log(`Status: GET http://localhost:${port}/status`);
-            console.log(`Manual trigger: POST http://localhost:${port}/trigger`);
+            console.log(`Status: GET https://your-app.onrender.com/status`);
+            console.log(`Manual trigger: POST https://your-app.onrender.com/trigger`);
+            console.log(`Submit 2FA: POST https://your-app.onrender.com/2fa {"code":"123456"}`);
         });
     }
 
@@ -137,10 +181,54 @@ class VRChatFetcher {
                 }
             });
 
-            if (response.status === 200 && response.data.authToken) {
-                this.authCookie = `auth=authcookie*${response.data.authToken}`;
-                console.log('Authentication successful');
-                return true;
+            if (response.status === 200) {
+                // Check if we got a direct auth token
+                if (response.data.authToken) {
+                    this.authCookie = `auth=authcookie*${response.data.authToken}`;
+                    console.log('Authentication successful');
+                    return true;
+                }
+                
+                // Check if 2FA is required
+                if (response.data.requiresTwoFactorAuth && response.data.requiresTwoFactorAuth.includes('emailOtp')) {
+                    console.log('2FA Email OTP required - extracting auth cookie from response headers');
+                    
+                    // Extract auth cookie from Set-Cookie header
+                    if (response.headers['set-cookie']) {
+                        const setCookieHeaders = Array.isArray(response.headers['set-cookie']) 
+                            ? response.headers['set-cookie'] 
+                            : [response.headers['set-cookie']];
+                        
+                        for (const cookie of setCookieHeaders) {
+                            if (cookie.startsWith('auth=')) {
+                                const authValue = cookie.split(';')[0].split('=')[1];
+                                this.authCookie = `auth=${authValue}`;
+                                this.waitingFor2FA = true;
+                                
+                                console.log('='.repeat(80));
+                                console.log('🔐 TWO-FACTOR AUTHENTICATION REQUIRED');
+                                console.log('='.repeat(80));
+                                console.log('📧 Check your email for a VRChat verification code');
+                                console.log('');
+                                console.log('💻 Submit the code using:');
+                                console.log(`   curl -X POST https://your-app.onrender.com/2fa \\`);
+                                console.log(`        -H "Content-Type: application/json" \\`);
+                                console.log(`        -d '{"code":"YOUR_CODE_HERE"}'`);
+                                console.log('');
+                                console.log('🌐 Or visit: https://your-app.onrender.com/status to check status');
+                                console.log('⏱️  The service will continue once you submit the code');
+                                console.log('='.repeat(80));
+                                
+                                // Don't wait - return success and let the user submit the code
+                                return true;
+                            }
+                        }
+                    }
+                    
+                    if (!this.authCookie) {
+                        throw new Error('Could not extract auth cookie from 2FA response');
+                    }
+                }
             } else if (response.status === 401) {
                 console.error('Authentication failed - Invalid credentials or 2FA required:', response.data);
                 if (retryCount < maxRetries) {
@@ -184,9 +272,62 @@ class VRChatFetcher {
             }
             throw new Error(`Authentication network error - max retries exceeded: ${error.message}`);
         }
+        
+        // If we get here without returning true, authentication failed
+        if (retryCount < maxRetries) {
+            const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000);
+            console.log(`Authentication incomplete - retrying in ${waitTime / 1000} seconds...`);
+            await this.sleep(waitTime);
+            return this.authenticate(retryCount + 1, maxRetries);
+        }
+        
+        throw new Error('Authentication failed - max retries exceeded');
     }
 
-    async fetchWorlds(sort, offset = 0) {
+    async submit2FACode(code) {
+        if (!this.authCookie) {
+            throw new Error('No auth cookie available. Please authenticate first.');
+        }
+
+        console.log(`Submitting 2FA code: ${code}`);
+
+        try {
+            const response = await this.makeRequest(`${this.baseUrl}/auth/twofactorauth/emailotp/verify`, {
+                method: 'POST',
+                headers: {
+                    'Cookie': this.authCookie,
+                    'Content-Type': 'application/json'
+                },
+                body: { code: code }
+            });
+
+            if (response.status === 200 && response.data.verified) {
+                console.log('✅ 2FA verification successful!');
+                this.waitingFor2FA = false;
+                
+                // Verify our auth works now
+                const verifyResponse = await this.makeRequest(`${this.baseUrl}/auth`, {
+                    headers: {
+                        'Cookie': this.authCookie
+                    }
+                });
+                
+                if (verifyResponse.status === 200 && verifyResponse.data.ok) {
+                    console.log('✅ Authentication fully verified and ready!');
+                    return true;
+                } else {
+                    console.log('❌ Auth verification failed after 2FA');
+                    return false;
+                }
+            } else {
+                console.error('2FA verification failed:', response);
+                return false;
+            }
+        } catch (error) {
+            console.error('2FA submission error:', error.message);
+            throw error;
+        }
+    }
         const url = `${this.baseUrl}/worlds?sort=${sort}&n=100&offset=${offset}`;
         
         const response = await this.makeRequest(url, {
