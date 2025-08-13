@@ -10,7 +10,16 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "keywords": ["vrchat", "api", "data-fetcher", "background-worker"],
+  "keywords": [
+    "vrchat",
+    "api",
+    "data-fetcher",
+    "background-worker"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "nodemailer": "^7.0.5"
+  }
 }

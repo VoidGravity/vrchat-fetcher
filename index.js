@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const nodemailer = require('nodemailer');
+const archiver = require('archiver');
 
 class VRChatFetcher {
     constructor() {
@@ -18,15 +20,28 @@ class VRChatFetcher {
         this.waitingFor2FA = false;
         this.pendingFetch = null; // Store pending fetch operation to resume after 2FA
         
+        // Email configuration
+        this.emailConfig = {
+            to: 'abdellahbardichwork@gmail.com',
+            from: 'abdellahbardichwork@gmail.com',
+            appPassword: 'umee modv suvi wdrm'
+        };
+        this.transporter = null;
+        this.lastEmailSent = null;
+        this.unsentDataQueue = [];
+        
         // Create data directories
         this.ensureDirectories();
+        
+        // Initialize email transporter
+        this.initializeEmail();
         
         // Start HTTP server for manual trigger
         this.startServer();
     }
 
     ensureDirectories() {
-        const dirs = ['data', 'data/scheduled', 'data/manual', 'daily-data'];
+        const dirs = ['data', 'data/scheduled', 'data/manual', 'daily-data', 'email-queue'];
         dirs.forEach(dir => {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
@@ -113,6 +128,52 @@ class VRChatFetcher {
                         res.end(JSON.stringify({ message: 'Invalid JSON' }));
                     }
                 });
+            } else if (req.method === 'POST' && req.url === '/send-email') {
+                // Manual email sending endpoint
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk.toString();
+                });
+                req.on('end', () => {
+                    try {
+                        const data = JSON.parse(body || '{}');
+                        const dateStr = data.date || new Date().toISOString().split('T')[0];
+                        const date = new Date(dateStr);
+                        
+                        this.sendDailyDataEmail(date).then(() => {
+                            res.writeHead(200);
+                            res.end(JSON.stringify({ 
+                                success: true,
+                                message: `Email sent successfully for ${dateStr}`
+                            }));
+                        }).catch(error => {
+                            res.writeHead(500);
+                            res.end(JSON.stringify({ 
+                                success: false,
+                                message: error.message 
+                            }));
+                        });
+                    } catch (error) {
+                        res.writeHead(400);
+                        res.end(JSON.stringify({ message: 'Invalid JSON. Send {"date":"2025-08-13"} or empty body for today' }));
+                    }
+                });
+            } else if (req.method === 'POST' && req.url === '/retry-emails') {
+                // Retry all unsent emails
+                this.retryUnsentEmails().then(() => {
+                    res.writeHead(200);
+                    res.end(JSON.stringify({ 
+                        success: true,
+                        message: `Retried ${this.unsentDataQueue.length} unsent emails`,
+                        queue: this.unsentDataQueue
+                    }));
+                }).catch(error => {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ 
+                        success: false,
+                        message: error.message 
+                    }));
+                });
             } else {
                 res.writeHead(404);
                 res.end(JSON.stringify({ message: 'Not found' }));
@@ -126,8 +187,9 @@ class VRChatFetcher {
             console.log(`Status: curl http://localhost:3000/status`);
             console.log(`Manual trigger: POST https://your-app.onrender.com/trigger`);
             console.log(`Submit 2FA: curl -X POST http://localhost:3000/2fa -H "Content-Type: application/json" -d '{"code":"123456"}'`);
-            // console.log(`Retry 2FA: POST https://your-app.onrender.com/retry`);
             console.log(`Retry 2FA: curl -X POST http://localhost:3000/retry -H "Content-Type: application/json"`);
+            console.log(`Send email: curl -X POST http://localhost:3000/send-email -H "Content-Type: application/json" -d '{"date":"2025-08-13"}'`);
+            console.log(`Retry emails: curl -X POST http://localhost:3000/retry-emails`);
         });
     }
 
@@ -749,6 +811,23 @@ class VRChatFetcher {
                 console.log('Fetch completed with some errors - check individual results');
             }
 
+            // Send daily data email if it's a new day and data was successfully collected
+            try {
+                if (dailyData.worlds.length > 0) {
+                    const currentDate = startTime.toISOString().split('T')[0];
+                    const lastEmailDate = this.lastEmailSent ? this.lastEmailSent.toISOString().split('T')[0] : null;
+                    
+                    // Send email if we haven't sent one today and this is scheduled fetch
+                    if (!this.manualTrigger && currentDate !== lastEmailDate) {
+                        console.log('Sending daily data email...');
+                        await this.sendDailyDataEmail(startTime);
+                    }
+                }
+            } catch (emailError) {
+                console.error('Failed to send daily data email:', emailError.message);
+                // Don't fail the entire fetch process due to email issues
+            }
+
         } catch (error) {
             console.error('Fetch failed with unhandled error:', error.message);
             
@@ -785,6 +864,222 @@ class VRChatFetcher {
 
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Email functionality
+    initializeEmail() {
+        try {
+            this.transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: this.emailConfig.from,
+                    pass: this.emailConfig.appPassword
+                }
+            });
+            console.log('Email transporter initialized');
+            
+            // Load any unsent data from previous runs
+            this.loadUnsentDataQueue();
+            
+            // Send startup notification
+            this.sendStartupNotification();
+            
+            // Schedule daily emails (every 24 hours)
+            this.scheduleDailyEmails();
+            
+        } catch (error) {
+            console.error('Failed to initialize email:', error.message);
+        }
+    }
+
+    async sendStartupNotification() {
+        try {
+            const subject = 'VRChat Fetcher - Server Started';
+            const html = `
+                <h2>VRChat Fetcher Notification</h2>
+                <p>The VRChat Fetcher server has started successfully at ${new Date().toISOString()}.</p>
+                <p><strong>Status:</strong></p>
+                <ul>
+                    <li>Username configured: ${!!this.credentials.username}</li>
+                    <li>Password configured: ${!!this.credentials.password}</li>
+                    <li>Email configured: ${!!this.emailConfig.to}</li>
+                </ul>
+                <p>The service will now begin fetching VRChat data every hour and send daily reports.</p>
+            `;
+
+            await this.sendEmail(subject, html);
+            console.log('✅ Startup notification email sent');
+        } catch (error) {
+            console.error('Failed to send startup notification:', error.message);
+        }
+    }
+
+    async createDailyDataArchive(filePath) {
+        return new Promise((resolve, reject) => {
+            const archivePath = filePath.replace('.json', '.zip');
+            const output = fs.createWriteStream(archivePath);
+            const archive = archiver('zip', {
+                zlib: { level: 9 } // Maximum compression
+            });
+
+            output.on('close', () => {
+                const sizeInMB = (archive.pointer() / 1024 / 1024).toFixed(2);
+                console.log(`Archive created: ${archivePath} (${sizeInMB} MB)`);
+                resolve(archivePath);
+            });
+
+            archive.on('error', (err) => {
+                reject(err);
+            });
+
+            archive.pipe(output);
+            archive.file(filePath, { name: path.basename(filePath) });
+            archive.finalize();
+        });
+    }
+
+    async sendDailyDataEmail(date = new Date()) {
+        try {
+            const filename = this.getDailyFileName(date);
+            const filePath = path.join('daily-data', filename);
+            
+            if (!fs.existsSync(filePath)) {
+                console.log(`No daily data file found for ${date.toISOString().split('T')[0]}`);
+                return;
+            }
+
+            // Load data for summary
+            const dailyData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            const worldsCount = dailyData.worlds?.length || 0;
+            const usersCount = Object.keys(dailyData.users || {}).length;
+            
+            // Create archive
+            const archivePath = await this.createDailyDataArchive(filePath);
+            const stats = fs.statSync(archivePath);
+            const sizeInMB = (stats.size / 1024 / 1024).toFixed(2);
+
+            const subject = `VRChat Daily Data - ${dailyData.date}`;
+            const html = `
+                <h2>VRChat Daily Data Report</h2>
+                <p><strong>Date:</strong> ${dailyData.date}</p>
+                <p><strong>Last Updated:</strong> ${dailyData.lastUpdated}</p>
+                
+                <h3>Summary Statistics:</h3>
+                <ul>
+                    <li><strong>Total Worlds:</strong> ${worldsCount}</li>
+                    <li><strong>Unique Users:</strong> ${usersCount}</li>
+                    <li><strong>Archive Size:</strong> ${sizeInMB} MB</li>
+                </ul>
+                
+                <p>The complete data is attached as a ZIP file containing the daily JSON data.</p>
+                <p><em>Data collection timestamp: ${dailyData.lastUpdated}</em></p>
+            `;
+
+            await this.sendEmail(subject, html, [{
+                filename: path.basename(archivePath),
+                path: archivePath
+            }]);
+
+            // Clean up archive file after sending
+            fs.unlinkSync(archivePath);
+            
+            console.log(`✅ Daily data email sent for ${dailyData.date}`);
+            this.lastEmailSent = new Date();
+            
+        } catch (error) {
+            console.error('Failed to send daily data email:', error.message);
+            // Add to unsent queue for retry
+            this.addToUnsentQueue(date);
+        }
+    }
+
+    async sendEmail(subject, html, attachments = []) {
+        if (!this.transporter) {
+            throw new Error('Email transporter not initialized');
+        }
+
+        const mailOptions = {
+            from: this.emailConfig.from,
+            to: this.emailConfig.to,
+            subject: subject,
+            html: html
+        };
+
+        if (attachments.length > 0) {
+            mailOptions.attachments = attachments;
+        }
+
+        return await this.transporter.sendMail(mailOptions);
+    }
+
+    addToUnsentQueue(date) {
+        const dateString = date.toISOString().split('T')[0];
+        if (!this.unsentDataQueue.includes(dateString)) {
+            this.unsentDataQueue.push(dateString);
+            this.saveUnsentDataQueue();
+            console.log(`Added ${dateString} to unsent data queue`);
+        }
+    }
+
+    saveUnsentDataQueue() {
+        const queuePath = path.join('email-queue', 'unsent.json');
+        fs.writeFileSync(queuePath, JSON.stringify({
+            queue: this.unsentDataQueue,
+            lastUpdated: new Date().toISOString()
+        }, null, 2));
+    }
+
+    loadUnsentDataQueue() {
+        try {
+            const queuePath = path.join('email-queue', 'unsent.json');
+            if (fs.existsSync(queuePath)) {
+                const data = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
+                this.unsentDataQueue = data.queue || [];
+                console.log(`Loaded ${this.unsentDataQueue.length} unsent data entries from queue`);
+                
+                // Retry sending unsent data
+                this.retryUnsentEmails();
+            }
+        } catch (error) {
+            console.error('Failed to load unsent data queue:', error.message);
+            this.unsentDataQueue = [];
+        }
+    }
+
+    async retryUnsentEmails() {
+        if (this.unsentDataQueue.length === 0) return;
+        
+        console.log(`Retrying ${this.unsentDataQueue.length} unsent emails...`);
+        
+        for (const dateString of [...this.unsentDataQueue]) {
+            try {
+                const date = new Date(dateString);
+                await this.sendDailyDataEmail(date);
+                
+                // Remove from queue if successful
+                this.unsentDataQueue = this.unsentDataQueue.filter(d => d !== dateString);
+                this.saveUnsentDataQueue();
+                
+                // Add delay between retries
+                await this.sleep(2000);
+                
+            } catch (error) {
+                console.error(`Failed to retry email for ${dateString}:`, error.message);
+            }
+        }
+    }
+
+    scheduleDailyEmails() {
+        // Send daily email every 24 hours
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        
+        setInterval(() => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            this.sendDailyDataEmail(yesterday);
+        }, TWENTY_FOUR_HOURS);
+        
+        console.log('Daily email scheduler initialized (every 24 hours)');
     }
 
     start() {
