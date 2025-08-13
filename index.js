@@ -70,7 +70,13 @@ class VRChatFetcher {
                     isRunning: this.isRunning,
                     waitingFor2FA: this.waitingFor2FA || false,
                     hasAuthCookie: !!this.authCookie,
-                    lastRun: this.getLastRunTime()
+                    lastRun: this.getLastRunTime(),
+                    email: {
+                        configured: !!this.transporter,
+                        lastEmailSent: this.lastEmailSent ? this.lastEmailSent.toISOString() : null,
+                        unsentCount: this.unsentDataQueue.length,
+                        unsentDates: this.unsentDataQueue
+                    }
                 }));
             } else if (req.method === 'POST' && req.url === '/trigger') {
                 if (!this.isRunning) {
@@ -881,8 +887,10 @@ class VRChatFetcher {
             // Load any unsent data from previous runs
             this.loadUnsentDataQueue();
             
-            // Send startup notification
-            this.sendStartupNotification();
+            // Send startup notification (with error handling)
+            this.sendStartupNotification().catch(error => {
+                console.log('Startup notification will be retried later due to:', error.message);
+            });
             
             // Schedule daily emails (every 24 hours)
             this.scheduleDailyEmails();
@@ -1059,13 +1067,21 @@ class VRChatFetcher {
                 // Remove from queue if successful
                 this.unsentDataQueue = this.unsentDataQueue.filter(d => d !== dateString);
                 this.saveUnsentDataQueue();
+                console.log(`✅ Successfully sent email for ${dateString}`);
                 
                 // Add delay between retries
                 await this.sleep(2000);
                 
             } catch (error) {
                 console.error(`Failed to retry email for ${dateString}:`, error.message);
+                // Keep in queue for next retry
             }
+        }
+        
+        if (this.unsentDataQueue.length > 0) {
+            console.log(`${this.unsentDataQueue.length} emails still pending retry`);
+        } else {
+            console.log('All unsent emails have been successfully sent');
         }
     }
 
