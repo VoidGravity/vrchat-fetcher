@@ -1,0 +1,533 @@
+{
+  "generatedAt": "2025-08-13T21:45:16.076Z",
+  "filters": {
+    "minOccurrences": 1,
+    "sortBy": "name"
+  },
+  "summary": {
+    "totalWorlds": 11,
+    "avgOccurrences": 3.91,
+    "highestOccurrences": 10,
+    "lowestOccurrences": 1,
+    "avgAvgOccupants": 19.11,
+    "highestAvgOccupants": 70,
+    "lowestAvgOccupants": 0,
+    "dataFiles": 5,
+    "totalDataPoints": 43,
+    "filteredWorlds": 11,
+    "unfilteredWorlds": 11
+  },
+  "worlds": [
+    {
+      "id": "wrld_45678",
+      "name": "Game World",
+      "authorId": "usr_44444",
+      "authorName": "Creator4",
+      "occupantReadings": [
+        {
+          "occupants": 60,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 16,
+          "popularity": 81,
+          "hotness": 25
+        },
+        {
+          "occupants": 57,
+          "timestamp": "2025-08-15T12:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 14,
+          "popularity": 82,
+          "hotness": 19
+        },
+        {
+          "occupants": 58,
+          "timestamp": "2025-08-15T14:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 15,
+          "popularity": 101,
+          "hotness": 21
+        },
+        {
+          "occupants": 50,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 12,
+          "popularity": 67,
+          "hotness": 19
+        },
+        {
+          "occupants": 49,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 9,
+          "popularity": 94,
+          "hotness": 16
+        },
+        {
+          "occupants": 59,
+          "timestamp": "2025-08-16T14:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 13,
+          "popularity": 64,
+          "hotness": 23
+        },
+        {
+          "occupants": 58,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 15,
+          "popularity": 97,
+          "hotness": 24
+        }
+      ],
+      "totalOccupants": 391,
+      "occurrences": 7,
+      "tags": [
+        "game",
+        "multiplayer"
+      ],
+      "firstSeen": "2025-08-15T10:00:00.000Z",
+      "lastSeen": "2025-08-17T10:00:00.000Z",
+      "avgOccupants": 55.86,
+      "maxOccupants": 60,
+      "minOccupants": 49
+    },
+    {
+      "id": "wrld_34567",
+      "name": "Popular Hub",
+      "authorId": "usr_33333",
+      "authorName": "Creator3",
+      "occupantReadings": [
+        {
+          "occupants": 48,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 11,
+          "popularity": 94,
+          "hotness": 16
+        },
+        {
+          "occupants": 47,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 11,
+          "popularity": 63,
+          "hotness": 18
+        },
+        {
+          "occupants": 32,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 10,
+          "popularity": 47,
+          "hotness": 15
+        },
+        {
+          "occupants": 42,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 8,
+          "popularity": 88,
+          "hotness": 18
+        },
+        {
+          "occupants": 44,
+          "timestamp": "2025-08-17T12:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 9,
+          "popularity": 92,
+          "hotness": 20
+        }
+      ],
+      "totalOccupants": 213,
+      "occurrences": 5,
+      "tags": [
+        "social",
+        "hangout"
+      ],
+      "firstSeen": "2025-08-15T10:00:00.000Z",
+      "lastSeen": "2025-08-17T12:00:00.000Z",
+      "avgOccupants": 42.6,
+      "maxOccupants": 48,
+      "minOccupants": 32
+    },
+    {
+      "id": "wrld_56789",
+      "name": "Quiet Space",
+      "authorId": "usr_55555",
+      "authorName": "Creator5",
+      "occupantReadings": [
+        {
+          "occupants": 79,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 15,
+          "popularity": 110,
+          "hotness": 29
+        },
+        {
+          "occupants": 73,
+          "timestamp": "2025-08-15T12:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 15,
+          "popularity": 94,
+          "hotness": 30
+        },
+        {
+          "occupants": 73,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 14,
+          "popularity": 114,
+          "hotness": 27
+        },
+        {
+          "occupants": 65,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 16,
+          "popularity": 65,
+          "hotness": 22
+        },
+        {
+          "occupants": 71,
+          "timestamp": "2025-08-16T14:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 15,
+          "popularity": 88,
+          "hotness": 31
+        },
+        {
+          "occupants": 62,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 12,
+          "popularity": 68,
+          "hotness": 27
+        },
+        {
+          "occupants": 67,
+          "timestamp": "2025-08-17T12:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 16,
+          "popularity": 101,
+          "hotness": 24
+        }
+      ],
+      "totalOccupants": 490,
+      "occurrences": 7,
+      "tags": [
+        "relaxation",
+        "meditation"
+      ],
+      "firstSeen": "2025-08-15T10:00:00.000Z",
+      "lastSeen": "2025-08-17T12:00:00.000Z",
+      "avgOccupants": 70,
+      "maxOccupants": 79,
+      "minOccupants": 62
+    },
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupantReadings": [
+        {
+          "occupants": 45,
+          "timestamp": "2025-08-14T10:00:00.000Z",
+          "sourceFile": "2025-08-14.json",
+          "heat": 8,
+          "popularity": 125,
+          "hotness": 15
+        },
+        {
+          "occupants": 52,
+          "timestamp": "2025-08-14T11:00:00.000Z",
+          "sourceFile": "2025-08-14.json",
+          "heat": 9,
+          "popularity": 130,
+          "hotness": 18
+        },
+        {
+          "occupants": 18,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 4,
+          "popularity": 1,
+          "hotness": 7
+        },
+        {
+          "occupants": 15,
+          "timestamp": "2025-08-15T12:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 7,
+          "popularity": 24,
+          "hotness": 8
+        },
+        {
+          "occupants": 3,
+          "timestamp": "2025-08-15T14:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 2,
+          "popularity": 21,
+          "hotness": 9
+        },
+        {
+          "occupants": 14,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 4,
+          "popularity": 37,
+          "hotness": 10
+        },
+        {
+          "occupants": 2,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 4,
+          "popularity": 17,
+          "hotness": 5
+        },
+        {
+          "occupants": 11,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 6,
+          "popularity": 40,
+          "hotness": 5
+        },
+        {
+          "occupants": 17,
+          "timestamp": "2025-08-17T12:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 3,
+          "popularity": 25,
+          "hotness": 11
+        },
+        {
+          "occupants": 19,
+          "timestamp": "2025-08-17T14:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 5,
+          "popularity": 41,
+          "hotness": 6
+        }
+      ],
+      "totalOccupants": 196,
+      "occurrences": 10,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "firstSeen": "2025-08-14T10:00:00.000Z",
+      "lastSeen": "2025-08-17T14:00:00.000Z",
+      "avgOccupants": 19.6,
+      "maxOccupants": 52,
+      "minOccupants": 2
+    },
+    {
+      "id": "wrld_23456",
+      "name": "Sample World 2",
+      "authorId": "usr_22222",
+      "authorName": "Creator2",
+      "occupantReadings": [
+        {
+          "occupants": 23,
+          "timestamp": "2025-08-14T10:00:00.000Z",
+          "sourceFile": "2025-08-14.json",
+          "heat": 12,
+          "popularity": 89,
+          "hotness": 20
+        },
+        {
+          "occupants": 30,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 8,
+          "popularity": 35,
+          "hotness": 16
+        },
+        {
+          "occupants": 24,
+          "timestamp": "2025-08-15T12:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 7,
+          "popularity": 28,
+          "hotness": 8
+        },
+        {
+          "occupants": 16,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 6,
+          "popularity": 45,
+          "hotness": 13
+        },
+        {
+          "occupants": 31,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 10,
+          "popularity": 76,
+          "hotness": 12
+        },
+        {
+          "occupants": 18,
+          "timestamp": "2025-08-16T14:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 7,
+          "popularity": 24,
+          "hotness": 12
+        },
+        {
+          "occupants": 17,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 3,
+          "popularity": 37,
+          "hotness": 8
+        },
+        {
+          "occupants": 18,
+          "timestamp": "2025-08-17T12:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 6,
+          "popularity": 64,
+          "hotness": 7
+        }
+      ],
+      "totalOccupants": 177,
+      "occurrences": 8,
+      "tags": [
+        "avatar",
+        "world"
+      ],
+      "firstSeen": "2025-08-14T10:00:00.000Z",
+      "lastSeen": "2025-08-17T12:00:00.000Z",
+      "avgOccupants": 22.13,
+      "maxOccupants": 31,
+      "minOccupants": 16
+    },
+    {
+      "id": "world1",
+      "name": "Unknown",
+      "authorId": "user1",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    },
+    {
+      "id": "world2",
+      "name": "Unknown",
+      "authorId": "user2",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    },
+    {
+      "id": "world3",
+      "name": "Unknown",
+      "authorId": "user1",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    },
+    {
+      "id": "world4",
+      "name": "Unknown",
+      "authorId": "user3",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    },
+    {
+      "id": "world5",
+      "name": "Unknown",
+      "authorId": "user2",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    },
+    {
+      "id": "world6",
+      "name": "Unknown",
+      "authorId": "user4",
+      "occupantReadings": [
+        {
+          "occupants": 0,
+          "timestamp": "2025-08-13T11:17:29.585Z",
+          "sourceFile": "2025-08-13.json"
+        }
+      ],
+      "totalOccupants": 0,
+      "occurrences": 1,
+      "tags": [],
+      "firstSeen": "2025-08-13T11:17:29.585Z",
+      "lastSeen": "2025-08-13T11:17:29.585Z",
+      "avgOccupants": 0,
+      "maxOccupants": 0,
+      "minOccupants": 0
+    }
+  ]
+}
