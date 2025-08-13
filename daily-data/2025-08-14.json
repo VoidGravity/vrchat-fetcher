@@ -1,0 +1,61 @@
+{
+  "date": "2025-08-14",
+  "worlds": [
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupants": 45,
+      "capacity": 80,
+      "privateOccupants": 0,
+      "publicOccupants": 45,
+      "heat": 8,
+      "popularity": 125,
+      "hotness": 15,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "fetchTimestamp": "2025-08-14T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_23456",
+      "name": "Sample World 2",
+      "authorId": "usr_22222",
+      "authorName": "Creator2",
+      "occupants": 23,
+      "capacity": 40,
+      "privateOccupants": 5,
+      "publicOccupants": 18,
+      "heat": 12,
+      "popularity": 89,
+      "hotness": 20,
+      "tags": [
+        "avatar",
+        "world"
+      ],
+      "fetchTimestamp": "2025-08-14T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupants": 52,
+      "capacity": 80,
+      "privateOccupants": 2,
+      "publicOccupants": 50,
+      "heat": 9,
+      "popularity": 130,
+      "hotness": 18,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "fetchTimestamp": "2025-08-14T11:00:00.000Z"
+    }
+  ],
+  "users": {},
+  "lastUpdated": "2025-08-14T11:00:00.000Z"
+}
