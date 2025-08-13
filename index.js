@@ -327,7 +327,7 @@ class VRChatFetcher {
             console.error('2FA submission error:', error.message);
             throw error;
         }
-    }
+    // }
         const url = `${this.baseUrl}/worlds?sort=${sort}&n=100&offset=${offset}`;
         
         const response = await this.makeRequest(url, {
