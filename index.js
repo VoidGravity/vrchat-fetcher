@@ -122,10 +122,12 @@ class VRChatFetcher {
         const port = process.env.PORT || 3000;
         server.listen(port, () => {
             console.log(`Server running on port ${port}`);
-            console.log(`Status: GET https://your-app.onrender.com/status`);
+
+            console.log(`Status: curl http://localhost:3000/status`);
             console.log(`Manual trigger: POST https://your-app.onrender.com/trigger`);
-            console.log(`Submit 2FA: POST https://your-app.onrender.com/2fa {"code":"123456"}`);
-            console.log(`Retry 2FA: POST https://your-app.onrender.com/retry`);
+            console.log(`Submit 2FA: curl -X POST http://localhost:3000/2fa -H "Content-Type: application/json" -d '{"code":"123456"}'`);
+            // console.log(`Retry 2FA: POST https://your-app.onrender.com/retry`);
+            console.log(`Retry 2FA: curl -X POST http://localhost:3000/retry -H "Content-Type: application/json"`);
         });
     }
 
@@ -233,14 +235,14 @@ class VRChatFetcher {
                                 console.log('='.repeat(80));
                                 console.log('📧 Check your email for a VRChat verification code');
                                 console.log('');
-                                console.log('💻 Submit the code using:');
-                                console.log(`   curl -X POST https://your-app.onrender.com/2fa \\`);
-                                console.log(`        -H "Content-Type: application/json" \\`);
-                                console.log(`        -d '{"code":"YOUR_CODE_HERE"}'`);
+                                console.log(`💻 user : curl -X POST http://localhost:3000/2fa -H "Content-Type: application/json" -d '{"code":"123456"}'`);
                                 console.log('');
-                                console.log('🌐 Or visit: https://your-app.onrender.com/status to check status');
+                                console.log('🌐 Or : curl http://localhost:3000/status to check status');
+                                console.log(`For a Manual world fetch trigger: POST http://localhost:3000/trigger`);
                                 console.log('⏱️  The service will continue once you submit the code');
+                                console.log(`to recieve another 2FA: curl -X POST http://localhost:3000/retry -H "Content-Type: application/json"`);
                                 console.log('='.repeat(80));
+
                                 
                                 // Don't wait - return success and let the user submit the code
                                 return true;
