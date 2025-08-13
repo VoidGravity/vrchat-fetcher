@@ -30,18 +30,29 @@ class VRChatFetcher {
         this.lastEmailSent = null;
         this.unsentDataQueue = [];
         
+        // Authentication retry state
+        this.authRetryState = {
+            retryCount: 0,
+            lastAttempt: null,
+            nextAllowedAttempt: null,
+            maxRetries: 5
+        };
+        
         // Create data directories
         this.ensureDirectories();
         
         // Initialize email transporter
         this.initializeEmail();
         
+        // Load authentication retry state
+        this.loadAuthRetryState();
+        
         // Start HTTP server for manual trigger
         this.startServer();
     }
 
     ensureDirectories() {
-        const dirs = ['data', 'data/scheduled', 'data/manual', 'daily-data', 'email-queue'];
+        const dirs = ['data', 'data/scheduled', 'data/manual', 'daily-data', 'email-queue', 'auth-retry'];
         dirs.forEach(dir => {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
@@ -250,8 +261,13 @@ class VRChatFetcher {
     }
 
     async authenticate(retryCount = 0, maxRetries = 5) {
-        const attempt = retryCount + 1;
-        console.log(`Authenticating with VRChat... (attempt ${attempt}/${maxRetries + 1})`);
+        // Check persistent retry state first
+        if (!this.canAttemptAuth()) {
+            throw new Error('Authentication blocked due to persistent retry limits');
+        }
+        
+        const attempt = this.authRetryState.retryCount + 1;
+        console.log(`Authenticating with VRChat... (attempt ${attempt}/${this.authRetryState.maxRetries})`);
         
         // If already waiting for 2FA, don't start a new authentication
         if (this.waitingFor2FA) {
@@ -279,6 +295,7 @@ class VRChatFetcher {
                 if (response.data.authToken) {
                     this.authCookie = `auth=authcookie*${response.data.authToken}`;
                     console.log('Authentication successful');
+                    this.resetAuthRetryState(); // Reset retry state on success
                     return true;
                 }
                 
@@ -313,68 +330,43 @@ class VRChatFetcher {
 
                                 
                                 // Don't wait - return success and let the user submit the code
+                                // Note: We don't reset retry state here as 2FA still needs to be completed
                                 return true;
                             }
                         }
                     }
                     
                     if (!this.authCookie) {
+                        this.updateAuthRetryState(true); // Mark as failed
                         throw new Error('Could not extract auth cookie from 2FA response');
                     }
                 }
             } else if (response.status === 401) {
                 console.error('Authentication failed - Invalid credentials or 2FA required:', response.data);
-                if (retryCount < maxRetries) {
-                    const waitTime = Math.min(30000 * Math.pow(2, retryCount), 300000); // Cap at 5 minutes
-                    console.log(`Retrying authentication in ${waitTime / 1000} seconds...`);
-                    await this.sleep(waitTime);
-                    return this.authenticate(retryCount + 1, maxRetries);
-                }
-                throw new Error('Invalid credentials or 2FA required - max retries exceeded');
+                this.updateAuthRetryState(true); // Mark as failed
+                throw new Error('Invalid credentials or 2FA required');
             } else if (response.status === 429) {
                 console.error('Rate limited during authentication:', response.data);
-                if (retryCount < maxRetries) {
-                    // For 429, wait longer with exponential backoff
-                    const waitTime = Math.min(300000 * Math.pow(1.5, retryCount), 900000); // Start at 5min, cap at 15min
-                    console.log(`Rate limited - waiting ${waitTime / 1000} seconds before retry...`);
-                    await this.sleep(waitTime);
-                    return this.authenticate(retryCount + 1, maxRetries);
-                }
-                throw new Error('Rate limit exceeded - max retries exceeded');
+                this.updateAuthRetryState(true); // Mark as failed
+                throw new Error('Rate limit exceeded during authentication');
             } else {
                 console.error('Unexpected authentication response:', response);
-                if (retryCount < maxRetries) {
-                    const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000); // Start at 1min, cap at 5min
-                    console.log(`Unexpected response - retrying in ${waitTime / 1000} seconds...`);
-                    await this.sleep(waitTime);
-                    return this.authenticate(retryCount + 1, maxRetries);
-                }
-                throw new Error(`Authentication failed with status ${response.status} - max retries exceeded`);
+                this.updateAuthRetryState(true); // Mark as failed
+                throw new Error(`Authentication failed with status ${response.status}`);
             }
         } catch (error) {
-            if (error.message.includes('max retries exceeded')) {
-                throw error; // Don't retry if we've already exceeded max retries
+            if (error.message.includes('Authentication blocked due to persistent retry limits')) {
+                throw error; // Don't update retry state again
             }
             
             console.error('Authentication network error:', error.message);
-            if (retryCount < maxRetries) {
-                const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000);
-                console.log(`Network error - retrying in ${waitTime / 1000} seconds...`);
-                await this.sleep(waitTime);
-                return this.authenticate(retryCount + 1, maxRetries);
-            }
-            throw new Error(`Authentication network error - max retries exceeded: ${error.message}`);
+            this.updateAuthRetryState(true); // Mark as failed
+            throw new Error(`Authentication network error: ${error.message}`);
         }
         
         // If we get here without returning true, authentication failed
-        if (retryCount < maxRetries) {
-            const waitTime = Math.min(60000 * Math.pow(2, retryCount), 300000);
-            console.log(`Authentication incomplete - retrying in ${waitTime / 1000} seconds...`);
-            await this.sleep(waitTime);
-            return this.authenticate(retryCount + 1, maxRetries);
-        }
-        
-        throw new Error('Authentication failed - max retries exceeded');
+        this.updateAuthRetryState(true); // Mark as failed
+        throw new Error('Authentication failed - unknown reason');
     }
 
     async submit2FACode(code) {
@@ -407,6 +399,7 @@ class VRChatFetcher {
                 
                 if (verifyResponse.status === 200 && verifyResponse.data.ok) {
                     console.log('✅ Authentication fully verified and ready!');
+                    this.resetAuthRetryState(); // Reset retry state on successful 2FA completion
                     
                     // If there's a pending fetch operation, resume it
                     if (this.pendingFetch) {
@@ -1096,6 +1089,108 @@ class VRChatFetcher {
         }, TWENTY_FOUR_HOURS);
         
         console.log('Daily email scheduler initialized (every 24 hours)');
+    }
+
+    saveAuthRetryState() {
+        try {
+            const statePath = path.join('auth-retry', 'state.json');
+            fs.writeFileSync(statePath, JSON.stringify({
+                ...this.authRetryState,
+                lastUpdated: new Date().toISOString()
+            }, null, 2));
+        } catch (error) {
+            console.error('Failed to save auth retry state:', error.message);
+        }
+    }
+
+    loadAuthRetryState() {
+        try {
+            const statePath = path.join('auth-retry', 'state.json');
+            if (fs.existsSync(statePath)) {
+                const data = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+                this.authRetryState = {
+                    retryCount: data.retryCount || 0,
+                    lastAttempt: data.lastAttempt ? new Date(data.lastAttempt) : null,
+                    nextAllowedAttempt: data.nextAllowedAttempt ? new Date(data.nextAllowedAttempt) : null,
+                    maxRetries: data.maxRetries || 5
+                };
+                console.log(`Loaded auth retry state: ${this.authRetryState.retryCount}/${this.authRetryState.maxRetries} attempts`);
+                
+                // Check if we're still in backoff period
+                if (this.authRetryState.nextAllowedAttempt && new Date() < this.authRetryState.nextAllowedAttempt) {
+                    const waitTime = Math.round((this.authRetryState.nextAllowedAttempt - new Date()) / 1000);
+                    console.log(`⚠️  Authentication backoff active - next attempt allowed in ${waitTime} seconds`);
+                }
+            } else {
+                console.log('No previous auth retry state found - starting fresh');
+            }
+        } catch (error) {
+            console.error('Failed to load auth retry state:', error.message);
+            this.authRetryState = {
+                retryCount: 0,
+                lastAttempt: null,
+                nextAllowedAttempt: null,
+                maxRetries: 5
+            };
+        }
+    }
+
+    resetAuthRetryState() {
+        this.authRetryState = {
+            retryCount: 0,
+            lastAttempt: null,
+            nextAllowedAttempt: null,
+            maxRetries: 5
+        };
+        this.saveAuthRetryState();
+        console.log('✅ Auth retry state reset after successful authentication');
+    }
+
+    canAttemptAuth() {
+        const now = new Date();
+        
+        // Check if we've exceeded max retries
+        if (this.authRetryState.retryCount >= this.authRetryState.maxRetries) {
+            console.error(`❌ Maximum authentication retries (${this.authRetryState.maxRetries}) exceeded`);
+            return false;
+        }
+        
+        // Check if we're still in backoff period
+        if (this.authRetryState.nextAllowedAttempt && now < this.authRetryState.nextAllowedAttempt) {
+            const waitTime = Math.round((this.authRetryState.nextAllowedAttempt - now) / 1000);
+            console.log(`⏳ Authentication backoff active - next attempt allowed in ${waitTime} seconds`);
+            return false;
+        }
+        
+        return true;
+    }
+
+    updateAuthRetryState(failed = false) {
+        const now = new Date();
+        this.authRetryState.lastAttempt = now;
+        
+        if (failed) {
+            this.authRetryState.retryCount++;
+            
+            // Calculate next allowed attempt with exponential backoff
+            let waitTime;
+            if (this.authRetryState.retryCount >= this.authRetryState.maxRetries) {
+                // Max retries reached - no more attempts allowed
+                waitTime = null;
+                this.authRetryState.nextAllowedAttempt = null;
+            } else {
+                // Exponential backoff: 30s, 60s, 120s, 240s, 300s (cap at 5 minutes)
+                waitTime = Math.min(30000 * Math.pow(2, this.authRetryState.retryCount - 1), 300000);
+                this.authRetryState.nextAllowedAttempt = new Date(now.getTime() + waitTime);
+            }
+            
+            console.log(`❌ Authentication failed (attempt ${this.authRetryState.retryCount}/${this.authRetryState.maxRetries})`);
+            if (waitTime) {
+                console.log(`⏳ Next attempt allowed in ${waitTime / 1000} seconds`);
+            }
+        }
+        
+        this.saveAuthRetryState();
     }
 
     start() {
