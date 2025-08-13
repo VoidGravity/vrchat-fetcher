@@ -26,7 +26,7 @@ class VRChatFetcher {
     }
 
     ensureDirectories() {
-        const dirs = ['data', 'data/scheduled', 'data/manual'];
+        const dirs = ['data', 'data/scheduled', 'data/manual', 'daily-data'];
         dirs.forEach(dir => {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
@@ -405,6 +405,177 @@ class VRChatFetcher {
         return response;
     }
 
+    async fetchUser(userId) {
+        const url = `${this.baseUrl}/users/${userId}`;
+        
+        const response = await this.makeRequest(url, {
+            headers: {
+                'Cookie': this.authCookie
+            }
+        });
+
+        if (response.status === 401) {
+            // Check if we're already waiting for 2FA before re-authenticating
+            if (this.waitingFor2FA) {
+                console.log('Authentication needed but 2FA is pending - deferring user fetch');
+                throw new Error('2FA_PENDING');
+            }
+            
+            console.log('Token expired during user fetch, re-authenticating...');
+            await this.authenticate();
+            
+            // If authenticate() resulted in 2FA being required, don't retry immediately
+            if (this.waitingFor2FA) {
+                console.log('2FA required after re-authentication - deferring user fetch');
+                throw new Error('2FA_PENDING');
+            }
+            
+            // Retry with new token
+            const retryResponse = await this.makeRequest(url, {
+                headers: {
+                    'Cookie': this.authCookie
+                }
+            });
+            
+            return retryResponse;
+        }
+
+        return response;
+    }
+
+    filterWorldData(world) {
+        // Remove unwanted fields and add fetch timestamp
+        const { udonProducts, unityPackages, ...filteredWorld } = world;
+        return {
+            ...filteredWorld,
+            fetchTimestamp: new Date().toISOString()
+        };
+    }
+
+    getDailyFileName(date = new Date()) {
+        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        return `${dateStr}.json`;
+    }
+
+    loadDailyData(date = new Date()) {
+        const filename = this.getDailyFileName(date);
+        const filepath = path.join('daily-data', filename);
+        
+        if (fs.existsSync(filepath)) {
+            try {
+                const data = fs.readFileSync(filepath, 'utf8');
+                return JSON.parse(data);
+            } catch (error) {
+                console.warn(`Error reading daily file ${filepath}:`, error.message);
+                return this.createEmptyDailyData(date);
+            }
+        }
+        
+        return this.createEmptyDailyData(date);
+    }
+
+    createEmptyDailyData(date = new Date()) {
+        return {
+            date: date.toISOString().split('T')[0],
+            worlds: [],
+            users: {}
+        };
+    }
+
+    saveDailyData(dailyData, date = new Date()) {
+        const filename = this.getDailyFileName(date);
+        const filepath = path.join('daily-data', filename);
+        
+        // Add last updated timestamp
+        dailyData.lastUpdated = new Date().toISOString();
+        
+        fs.writeFileSync(filepath, JSON.stringify(dailyData, null, 2));
+        console.log(`Daily data saved to ${filepath}`);
+        return filepath;
+    }
+
+    extractUniqueUserIds(worldsData) {
+        const userIds = new Set();
+        
+        // Extract author IDs from all worlds across all sort types
+        Object.values(worldsData).forEach(worldArray => {
+            if (Array.isArray(worldArray)) {
+                worldArray.forEach(world => {
+                    if (world.authorId) {
+                        userIds.add(world.authorId);
+                    }
+                });
+            }
+        });
+        
+        return Array.from(userIds);
+    }
+
+    async fetchUsersBatch(userIds, existingUsers = {}) {
+        console.log(`Fetching user data for ${userIds.length} unique users...`);
+        const users = { ...existingUsers };
+        let fetchedCount = 0;
+        let errorCount = 0;
+
+        for (const userId of userIds) {
+            // Skip if we already have this user's data for today
+            if (users[userId] && users[userId].fetchTimestamp) {
+                const fetchDate = new Date(users[userId].fetchTimestamp).toDateString();
+                const todayDate = new Date().toDateString();
+                if (fetchDate === todayDate) {
+                    console.log(`  Skipping user ${userId} - already fetched today`);
+                    continue;
+                }
+            }
+
+            try {
+                console.log(`  Fetching user ${userId}... (${fetchedCount + 1}/${userIds.length - Object.keys(existingUsers).length})`);
+                const response = await this.fetchUser(userId);
+                
+                if (response.status === 200 && response.data) {
+                    users[userId] = {
+                        ...response.data,
+                        fetchTimestamp: new Date().toISOString()
+                    };
+                    fetchedCount++;
+                } else if (response.status === 404) {
+                    console.log(`    User ${userId} not found (404) - skipping`);
+                    users[userId] = {
+                        id: userId,
+                        error: 'User not found',
+                        fetchTimestamp: new Date().toISOString()
+                    };
+                } else if (response.status === 429) {
+                    console.log('Rate limited during user fetch, waiting 30 seconds...');
+                    await this.sleep(30000);
+                    // Retry this user
+                    continue;
+                } else {
+                    console.log(`    Failed to fetch user ${userId}: ${response.status}`);
+                    errorCount++;
+                }
+                
+                // Rate limiting: wait 1 second between user requests
+                await this.sleep(1000);
+                
+            } catch (error) {
+                if (error.message === '2FA_PENDING') {
+                    console.log('2FA authentication required during user fetch - will retry later');
+                    throw error;
+                }
+                
+                console.log(`    Error fetching user ${userId}: ${error.message}`);
+                errorCount++;
+                
+                // Continue with next user on individual errors
+                continue;
+            }
+        }
+
+        console.log(`User fetch complete: ${fetchedCount} fetched, ${errorCount} errors`);
+        return users;
+    }
+
     async fetchAllData() {
         if (this.isRunning) {
             console.log('Fetch already in progress, skipping...');
@@ -505,7 +676,48 @@ class VRChatFetcher {
                 }
             }
 
-            // Save results even if there were some errors
+            // Process and filter world data, adding timestamps
+            console.log('Processing world data...');
+            const processedWorldsData = {};
+            Object.keys(allResults).forEach(sort => {
+                processedWorldsData[sort] = allResults[sort].map(world => this.filterWorldData(world));
+            });
+
+            // Extract unique user IDs for fetching user data
+            const uniqueUserIds = this.extractUniqueUserIds(processedWorldsData);
+            console.log(`Found ${uniqueUserIds.length} unique user IDs to fetch`);
+
+            // Load existing daily data to merge
+            const dailyData = this.loadDailyData(startTime);
+            
+            // Add processed worlds to daily data
+            dailyData.worlds.push(...Object.values(processedWorldsData).flat());
+            
+            // Fetch user data for unique user IDs (only if we have auth and no errors so far)
+            if (!hasErrors && uniqueUserIds.length > 0) {
+                try {
+                    console.log('Fetching user data...');
+                    const usersData = await this.fetchUsersBatch(uniqueUserIds, dailyData.users);
+                    dailyData.users = usersData;
+                } catch (userError) {
+                    if (userError.message === '2FA_PENDING') {
+                        console.log('2FA authentication required during user fetch - storing fetch operation for later resume');
+                        this.pendingFetch = () => this.fetchAllData();
+                        this.isRunning = false; // Allow the operation to be resumed later
+                        return;
+                    }
+                    
+                    console.error('Error fetching user data:', userError.message);
+                    hasErrors = true;
+                }
+            } else {
+                console.log('Skipping user data fetch due to world fetch errors or no user IDs');
+            }
+
+            // Save daily data file
+            const dailyFilePath = this.saveDailyData(dailyData, startTime);
+
+            // Keep backward compatibility: also save in original format
             const filename = `vrchat_worlds_${timestamp}.json`;
             const filepath = path.join('data', folderName, filename);
             
@@ -514,7 +726,7 @@ class VRChatFetcher {
                 totalRequests,
                 type: folderName,
                 hasErrors,
-                data: allResults,
+                data: allResults, // Keep original format for compatibility
                 summary: {
                     popularity: allResults.popularity?.length || 0,
                     heat: allResults.heat?.length || 0,
@@ -523,13 +735,16 @@ class VRChatFetcher {
             };
 
             fs.writeFileSync(filepath, JSON.stringify(result, null, 2));
-            console.log(`Data saved to ${filepath}`);
+            console.log(`Legacy data saved to ${filepath}`);
             
             // Save summary log
             const errorFlag = hasErrors ? ' (with errors)' : '';
-            const logEntry = `${startTime.toISOString()}: ${folderName} fetch completed${errorFlag} - ${totalRequests} requests, ${result.summary.popularity + result.summary.heat + result.summary.hotness} total worlds\n`;
+            const totalUsers = Object.keys(dailyData.users).length;
+            const logEntry = `${startTime.toISOString()}: ${folderName} fetch completed${errorFlag} - ${totalRequests} requests, ${result.summary.popularity + result.summary.heat + result.summary.hotness} total worlds, ${totalUsers} users\n`;
             fs.appendFileSync(path.join('data', 'fetch_log.txt'), logEntry);
 
+            console.log(`✅ Fetch completed: ${dailyData.worlds.length} worlds and ${totalUsers} users saved to ${dailyFilePath}`);
+            
             if (hasErrors) {
                 console.log('Fetch completed with some errors - check individual results');
             }
