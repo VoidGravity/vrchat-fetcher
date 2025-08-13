@@ -1,0 +1,58 @@
+{
+  "date": "2025-08-13",
+  "worlds": [
+    {
+      "id": "world1",
+      "authorId": "user1",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    {
+      "id": "world2",
+      "authorId": "user2",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    {
+      "id": "world3",
+      "authorId": "user1",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    {
+      "id": "world4",
+      "authorId": "user3",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    {
+      "id": "world5",
+      "authorId": "user2",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    {
+      "id": "world6",
+      "authorId": "user4",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    }
+  ],
+  "users": {
+    "user1": {
+      "id": "user1",
+      "displayName": "User One",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    "user2": {
+      "id": "user2",
+      "displayName": "User Two",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    "user3": {
+      "id": "user3",
+      "displayName": "User Three",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    },
+    "user4": {
+      "id": "user4",
+      "displayName": "User Four",
+      "fetchTimestamp": "2025-08-13T11:17:29.585Z"
+    }
+  },
+  "lastUpdated": "2025-08-13T11:17:29.585Z"
+}
