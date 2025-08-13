@@ -16,6 +16,7 @@ class VRChatFetcher {
         this.isRunning = false;
         this.manualTrigger = false;
         this.waitingFor2FA = false;
+        this.pendingFetch = null; // Store pending fetch operation to resume after 2FA
         
         // Create data directories
         this.ensureDirectories();
@@ -66,6 +67,21 @@ class VRChatFetcher {
                     res.writeHead(429);
                     res.end(JSON.stringify({ message: 'Fetch already in progress' }));
                 }
+            } else if (req.method === 'POST' && req.url === '/retry') {
+                if (this.waitingFor2FA && this.authCookie) {
+                    // Re-send the 2FA email by making a new authentication request
+                    console.log('Retrying 2FA email request...');
+                    res.writeHead(200);
+                    res.end(JSON.stringify({ 
+                        message: 'New 2FA code requested - check your email',
+                        waitingFor2FA: true 
+                    }));
+                } else {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ 
+                        message: 'No 2FA request pending or no auth cookie available' 
+                    }));
+                }
             } else if (req.method === 'POST' && req.url === '/2fa') {
                 let body = '';
                 req.on('data', chunk => {
@@ -106,9 +122,12 @@ class VRChatFetcher {
         const port = process.env.PORT || 3000;
         server.listen(port, () => {
             console.log(`Server running on port ${port}`);
-            console.log(`Status: GET https://your-app.onrender.com/status`);
+
+            console.log(`Status: curl http://localhost:3000/status`);
             console.log(`Manual trigger: POST https://your-app.onrender.com/trigger`);
-            console.log(`Submit 2FA: POST https://your-app.onrender.com/2fa {"code":"123456"}`);
+            console.log(`Submit 2FA: curl -X POST http://localhost:3000/2fa -H "Content-Type: application/json" -d '{"code":"123456"}'`);
+            // console.log(`Retry 2FA: POST https://your-app.onrender.com/retry`);
+            console.log(`Retry 2FA: curl -X POST http://localhost:3000/retry -H "Content-Type: application/json"`);
         });
     }
 
@@ -166,6 +185,12 @@ class VRChatFetcher {
         const attempt = retryCount + 1;
         console.log(`Authenticating with VRChat... (attempt ${attempt}/${maxRetries + 1})`);
         
+        // If already waiting for 2FA, don't start a new authentication
+        if (this.waitingFor2FA) {
+            console.log('Already waiting for 2FA input - skipping authentication');
+            return true;
+        }
+        
         if (!this.credentials.username || !this.credentials.password) {
             throw new Error('Username and password must be set in environment variables');
         }
@@ -210,14 +235,14 @@ class VRChatFetcher {
                                 console.log('='.repeat(80));
                                 console.log('📧 Check your email for a VRChat verification code');
                                 console.log('');
-                                console.log('💻 Submit the code using:');
-                                console.log(`   curl -X POST https://your-app.onrender.com/2fa \\`);
-                                console.log(`        -H "Content-Type: application/json" \\`);
-                                console.log(`        -d '{"code":"YOUR_CODE_HERE"}'`);
+                                console.log(`💻 user : curl -X POST http://localhost:3000/2fa -H "Content-Type: application/json" -d '{"code":"123456"}'`);
                                 console.log('');
-                                console.log('🌐 Or visit: https://your-app.onrender.com/status to check status');
+                                console.log('🌐 Or : curl http://localhost:3000/status to check status');
+                                console.log(`For a Manual world fetch trigger: POST http://localhost:3000/trigger`);
                                 console.log('⏱️  The service will continue once you submit the code');
+                                console.log(`to recieve another 2FA: curl -X POST http://localhost:3000/retry -H "Content-Type: application/json"`);
                                 console.log('='.repeat(80));
+
                                 
                                 // Don't wait - return success and let the user submit the code
                                 return true;
@@ -314,6 +339,19 @@ class VRChatFetcher {
                 
                 if (verifyResponse.status === 200 && verifyResponse.data.ok) {
                     console.log('✅ Authentication fully verified and ready!');
+                    
+                    // If there's a pending fetch operation, resume it
+                    if (this.pendingFetch) {
+                        console.log('🔄 Resuming pending fetch operation...');
+                        const pendingOperation = this.pendingFetch;
+                        this.pendingFetch = null;
+                        
+                        // Resume the fetch operation asynchronously
+                        setImmediate(() => {
+                            pendingOperation().catch(console.error);
+                        });
+                    }
+                    
                     return true;
                 } else {
                     console.log('❌ Auth verification failed after 2FA');
@@ -339,8 +377,20 @@ class VRChatFetcher {
         });
 
         if (response.status === 401) {
+            // Check if we're already waiting for 2FA before re-authenticating
+            if (this.waitingFor2FA) {
+                console.log('Authentication needed but 2FA is pending - deferring fetch');
+                throw new Error('2FA_PENDING'); // Special error to handle in calling code
+            }
+            
             console.log('Token expired, re-authenticating...');
             await this.authenticate();
+            
+            // If authenticate() resulted in 2FA being required, don't retry immediately
+            if (this.waitingFor2FA) {
+                console.log('2FA required after re-authentication - deferring fetch');
+                throw new Error('2FA_PENDING');
+            }
             
             // Retry with new token
             const retryResponse = await this.makeRequest(url, {
@@ -374,6 +424,14 @@ class VRChatFetcher {
                 console.log('No auth cookie found, attempting to authenticate...');
                 try {
                     await this.authenticate();
+                    
+                    // If 2FA is required, store this operation for later
+                    if (this.waitingFor2FA) {
+                        console.log('2FA required - storing fetch operation for later resume');
+                        this.pendingFetch = () => this.fetchAllData();
+                        this.isRunning = false; // Allow the operation to be resumed later
+                        return;
+                    }
                 } catch (authError) {
                     console.error('Failed to authenticate after all retries:', authError.message);
                     console.log('Scheduling retry in 10 minutes...');
@@ -421,6 +479,13 @@ class VRChatFetcher {
                             hasErrors = true;
                         }
                     } catch (error) {
+                        if (error.message === '2FA_PENDING') {
+                            console.log('2FA authentication required - storing fetch operation for later resume');
+                            this.pendingFetch = () => this.fetchAllData();
+                            this.isRunning = false; // Allow the operation to be resumed later
+                            return;
+                        }
+                        
                         console.error(`Error fetching ${sort} page ${page + 1}:`, error.message);
                         hasErrors = true;
                         
