@@ -1,0 +1,205 @@
+{
+  "date": "2025-08-15",
+  "worlds": [
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupants": 0,
+      "capacity": 18,
+      "privateOccupants": 0,
+      "publicOccupants": 0,
+      "heat": 4,
+      "popularity": 1,
+      "hotness": 7,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "fetchTimestamp": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupants": 15,
+      "capacity": 43,
+      "privateOccupants": 1,
+      "publicOccupants": 14,
+      "heat": 7,
+      "popularity": 24,
+      "hotness": 8,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "fetchTimestamp": "2025-08-15T12:00:00.000Z"
+    },
+    {
+      "id": "wrld_12345",
+      "name": "Sample World 1",
+      "authorId": "usr_11111",
+      "authorName": "Creator1",
+      "occupants": 3,
+      "capacity": 24,
+      "privateOccupants": 0,
+      "publicOccupants": 3,
+      "heat": 2,
+      "popularity": 21,
+      "hotness": 9,
+      "tags": [
+        "game",
+        "social"
+      ],
+      "fetchTimestamp": "2025-08-15T14:00:00.000Z"
+    },
+    {
+      "id": "wrld_23456",
+      "name": "Sample World 2",
+      "authorId": "usr_22222",
+      "authorName": "Creator2",
+      "occupants": 30,
+      "capacity": 42,
+      "privateOccupants": 3,
+      "publicOccupants": 27,
+      "heat": 8,
+      "popularity": 35,
+      "hotness": 16,
+      "tags": [
+        "avatar",
+        "world"
+      ],
+      "fetchTimestamp": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_23456",
+      "name": "Sample World 2",
+      "authorId": "usr_22222",
+      "authorName": "Creator2",
+      "occupants": 24,
+      "capacity": 47,
+      "privateOccupants": 2,
+      "publicOccupants": 22,
+      "heat": 7,
+      "popularity": 28,
+      "hotness": 8,
+      "tags": [
+        "avatar",
+        "world"
+      ],
+      "fetchTimestamp": "2025-08-15T12:00:00.000Z"
+    },
+    {
+      "id": "wrld_34567",
+      "name": "Popular Hub",
+      "authorId": "usr_33333",
+      "authorName": "Creator3",
+      "occupants": 48,
+      "capacity": 61,
+      "privateOccupants": 4,
+      "publicOccupants": 44,
+      "heat": 11,
+      "popularity": 94,
+      "hotness": 16,
+      "tags": [
+        "social",
+        "hangout"
+      ],
+      "fetchTimestamp": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_45678",
+      "name": "Game World",
+      "authorId": "usr_44444",
+      "authorName": "Creator4",
+      "occupants": 60,
+      "capacity": 70,
+      "privateOccupants": 6,
+      "publicOccupants": 54,
+      "heat": 16,
+      "popularity": 81,
+      "hotness": 25,
+      "tags": [
+        "game",
+        "multiplayer"
+      ],
+      "fetchTimestamp": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_45678",
+      "name": "Game World",
+      "authorId": "usr_44444",
+      "authorName": "Creator4",
+      "occupants": 57,
+      "capacity": 78,
+      "privateOccupants": 5,
+      "publicOccupants": 52,
+      "heat": 14,
+      "popularity": 82,
+      "hotness": 19,
+      "tags": [
+        "game",
+        "multiplayer"
+      ],
+      "fetchTimestamp": "2025-08-15T12:00:00.000Z"
+    },
+    {
+      "id": "wrld_45678",
+      "name": "Game World",
+      "authorId": "usr_44444",
+      "authorName": "Creator4",
+      "occupants": 58,
+      "capacity": 68,
+      "privateOccupants": 5,
+      "publicOccupants": 53,
+      "heat": 15,
+      "popularity": 101,
+      "hotness": 21,
+      "tags": [
+        "game",
+        "multiplayer"
+      ],
+      "fetchTimestamp": "2025-08-15T14:00:00.000Z"
+    },
+    {
+      "id": "wrld_56789",
+      "name": "Quiet Space",
+      "authorId": "usr_55555",
+      "authorName": "Creator5",
+      "occupants": 79,
+      "capacity": 92,
+      "privateOccupants": 7,
+      "publicOccupants": 72,
+      "heat": 15,
+      "popularity": 110,
+      "hotness": 29,
+      "tags": [
+        "relaxation",
+        "meditation"
+      ],
+      "fetchTimestamp": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": "wrld_56789",
+      "name": "Quiet Space",
+      "authorId": "usr_55555",
+      "authorName": "Creator5",
+      "occupants": 73,
+      "capacity": 90,
+      "privateOccupants": 7,
+      "publicOccupants": 66,
+      "heat": 15,
+      "popularity": 94,
+      "hotness": 30,
+      "tags": [
+        "relaxation",
+        "meditation"
+      ],
+      "fetchTimestamp": "2025-08-15T12:00:00.000Z"
+    }
+  ],
+  "users": {},
+  "lastUpdated": "2025-08-15T12:00:00.000Z"
+}

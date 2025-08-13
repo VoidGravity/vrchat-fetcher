@@ -139,3 +139,38 @@ Monitor the Render logs to see:
 - Files are timestamped and organized by type (scheduled/manual)
 - Total of 15 requests per hour (3 sorts × 5 pages)
 - Data is stored in memory-efficient JSON format
+
+## Data Analysis
+
+### World Statistics Aggregation
+
+The repository includes a comprehensive aggregation script that analyzes all daily data files to produce world statistics:
+
+```bash
+# Run aggregation with default settings
+npm run aggregate
+
+# Or with custom options
+node aggregate_stats.js --min-occurrences 5 --top 20
+```
+
+**Features:**
+- Calculates average occupants and occurrence counts for all worlds
+- Provides global statistics (average, highest, lowest occurrences)
+- Flexible sorting and filtering options
+- Detailed JSON output with comprehensive world data
+
+See [AGGREGATION.md](AGGREGATION.md) for detailed documentation and usage examples.
+
+**Example Output:**
+```
+📊 Aggregation Results Summary:
+Total unique worlds: 11
+Average occurrences per world: 3.91
+Highest avg occupants: 70
+Average avg occupants: 19.11
+
+🏆 Top 5 Worlds by avgOccupants:
+1. Quiet Space - Avg: 70 | Occurrences: 7
+2. Game World - Avg: 55.86 | Occurrences: 7
+```
