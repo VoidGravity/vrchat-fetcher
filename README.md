@@ -10,6 +10,8 @@ A Node.js background worker that fetches VRChat worlds data every hour and store
 - **NEW: User data fetching** - Fetches creator details for all worlds using VRChat `/users/{userId}` API
 - **NEW: Data processing** - Removes unwanted fields and adds timestamps
 - **NEW: Rate limiting** - Smart deduplication and spacing for user API calls
+- **NEW: Email notifications** - Sends startup notifications and daily data reports via email
+- **NEW: Robust email delivery** - Handles failures with unsent data queue and retry mechanism
 - Runs automatically every hour
 - Manual trigger endpoint
 - Automatic authentication handling
@@ -29,6 +31,38 @@ A Node.js background worker that fetches VRChat worlds data every hour and store
 
 2. Deploy to Render as a Background Worker
 
+## Email Configuration
+
+The application includes robust email notifications for startup events and daily data delivery:
+
+### Features
+- **Startup Notification**: Sends an email when the server starts
+- **Daily Data Reports**: Automatically emails daily data as compressed ZIP attachments every 24 hours
+- **Failure Recovery**: Stores unsent emails in a queue and retries them on restart
+- **Manual Controls**: API endpoints to manually send emails or retry failed sends
+
+### Email Settings
+The email configuration is hardcoded for the specific use case:
+- **Recipient**: abdellahbardichwork@gmail.com
+- **Sender**: abdellahbardichwork@gmail.com (Gmail with App Password)
+- **SMTP**: Gmail service with authentication
+
+### Email Schedule
+- **Startup**: Immediate notification when service starts
+- **Daily Reports**: Every 24 hours with previous day's data
+- **Retry Logic**: Automatic retry on restart if previous emails failed
+
+### Manual Email Controls
+```bash
+# Send email for specific date
+curl -X POST http://localhost:3000/send-email \
+  -H "Content-Type: application/json" \
+  -d '{"date":"2025-08-13"}'
+
+# Retry all unsent emails
+curl -X POST http://localhost:3000/retry-emails
+```
+
 ## File Structure
 
 ```
@@ -41,12 +75,17 @@ daily-data/           # NEW: Daily organized data with user info
 ├── 2025-08-13.json  # Contains worlds + user data for the day
 ├── 2025-08-14.json
 └── ...
+
+email-queue/          # NEW: Email failure recovery
+└── unsent.json      # Queue of unsent daily data emails
 ```
 
 ## API Endpoints
 
-- `GET /status` - Check service status and last run time
+- `GET /status` - Check service status and last run time (includes email status)
 - `POST /trigger` - Manually trigger a data fetch
+- `POST /send-email` - Manually send daily data email for a specific date
+- `POST /retry-emails` - Retry sending all unsent emails from the queue
 
 ## Data Format
 
