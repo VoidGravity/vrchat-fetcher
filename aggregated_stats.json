@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2025-08-13T21:45:16.076Z",
+  "generatedAt": "2025-08-14T15:55:13.414Z",
   "filters": {
     "minOccurrences": 1,
-    "sortBy": "name"
+    "sortBy": "avgOccupants"
   },
   "summary": {
     "totalWorlds": 11,
@@ -18,6 +18,81 @@
     "unfilteredWorlds": 11
   },
   "worlds": [
+    {
+      "id": "wrld_56789",
+      "name": "Quiet Space",
+      "authorId": "usr_55555",
+      "authorName": "Creator5",
+      "occupantReadings": [
+        {
+          "occupants": 79,
+          "timestamp": "2025-08-15T10:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 15,
+          "popularity": 110,
+          "hotness": 29
+        },
+        {
+          "occupants": 73,
+          "timestamp": "2025-08-15T12:00:00.000Z",
+          "sourceFile": "2025-08-15.json",
+          "heat": 15,
+          "popularity": 94,
+          "hotness": 30
+        },
+        {
+          "occupants": 73,
+          "timestamp": "2025-08-16T10:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 14,
+          "popularity": 114,
+          "hotness": 27
+        },
+        {
+          "occupants": 65,
+          "timestamp": "2025-08-16T12:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 16,
+          "popularity": 65,
+          "hotness": 22
+        },
+        {
+          "occupants": 71,
+          "timestamp": "2025-08-16T14:00:00.000Z",
+          "sourceFile": "2025-08-16.json",
+          "heat": 15,
+          "popularity": 88,
+          "hotness": 31
+        },
+        {
+          "occupants": 62,
+          "timestamp": "2025-08-17T10:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 12,
+          "popularity": 68,
+          "hotness": 27
+        },
+        {
+          "occupants": 67,
+          "timestamp": "2025-08-17T12:00:00.000Z",
+          "sourceFile": "2025-08-17.json",
+          "heat": 16,
+          "popularity": 101,
+          "hotness": 24
+        }
+      ],
+      "totalOccupants": 490,
+      "occurrences": 7,
+      "tags": [
+        "relaxation",
+        "meditation"
+      ],
+      "firstSeen": "2025-08-15T10:00:00.000Z",
+      "lastSeen": "2025-08-17T12:00:00.000Z",
+      "avgOccupants": 70,
+      "maxOccupants": 79,
+      "minOccupants": 62
+    },
     {
       "id": "wrld_45678",
       "name": "Game World",
@@ -153,79 +228,87 @@
       "minOccupants": 32
     },
     {
-      "id": "wrld_56789",
-      "name": "Quiet Space",
-      "authorId": "usr_55555",
-      "authorName": "Creator5",
+      "id": "wrld_23456",
+      "name": "Sample World 2",
+      "authorId": "usr_22222",
+      "authorName": "Creator2",
       "occupantReadings": [
         {
-          "occupants": 79,
+          "occupants": 23,
+          "timestamp": "2025-08-14T10:00:00.000Z",
+          "sourceFile": "2025-08-14.json",
+          "heat": 12,
+          "popularity": 89,
+          "hotness": 20
+        },
+        {
+          "occupants": 30,
           "timestamp": "2025-08-15T10:00:00.000Z",
           "sourceFile": "2025-08-15.json",
-          "heat": 15,
-          "popularity": 110,
-          "hotness": 29
+          "heat": 8,
+          "popularity": 35,
+          "hotness": 16
         },
         {
-          "occupants": 73,
+          "occupants": 24,
           "timestamp": "2025-08-15T12:00:00.000Z",
           "sourceFile": "2025-08-15.json",
-          "heat": 15,
-          "popularity": 94,
-          "hotness": 30
+          "heat": 7,
+          "popularity": 28,
+          "hotness": 8
         },
         {
-          "occupants": 73,
+          "occupants": 16,
           "timestamp": "2025-08-16T10:00:00.000Z",
           "sourceFile": "2025-08-16.json",
-          "heat": 14,
-          "popularity": 114,
-          "hotness": 27
+          "heat": 6,
+          "popularity": 45,
+          "hotness": 13
         },
         {
-          "occupants": 65,
+          "occupants": 31,
           "timestamp": "2025-08-16T12:00:00.000Z",
           "sourceFile": "2025-08-16.json",
-          "heat": 16,
-          "popularity": 65,
-          "hotness": 22
+          "heat": 10,
+          "popularity": 76,
+          "hotness": 12
         },
         {
-          "occupants": 71,
+          "occupants": 18,
           "timestamp": "2025-08-16T14:00:00.000Z",
           "sourceFile": "2025-08-16.json",
-          "heat": 15,
-          "popularity": 88,
-          "hotness": 31
+          "heat": 7,
+          "popularity": 24,
+          "hotness": 12
         },
         {
-          "occupants": 62,
+          "occupants": 17,
           "timestamp": "2025-08-17T10:00:00.000Z",
           "sourceFile": "2025-08-17.json",
-          "heat": 12,
-          "popularity": 68,
-          "hotness": 27
+          "heat": 3,
+          "popularity": 37,
+          "hotness": 8
         },
         {
-          "occupants": 67,
+          "occupants": 18,
           "timestamp": "2025-08-17T12:00:00.000Z",
           "sourceFile": "2025-08-17.json",
-          "heat": 16,
-          "popularity": 101,
-          "hotness": 24
+          "heat": 6,
+          "popularity": 64,
+          "hotness": 7
         }
       ],
-      "totalOccupants": 490,
-      "occurrences": 7,
+      "totalOccupants": 177,
+      "occurrences": 8,
       "tags": [
-        "relaxation",
-        "meditation"
+        "avatar",
+        "world"
       ],
-      "firstSeen": "2025-08-15T10:00:00.000Z",
+      "firstSeen": "2025-08-14T10:00:00.000Z",
       "lastSeen": "2025-08-17T12:00:00.000Z",
-      "avgOccupants": 70,
-      "maxOccupants": 79,
-      "minOccupants": 62
+      "avgOccupants": 22.13,
+      "maxOccupants": 31,
+      "minOccupants": 16
     },
     {
       "id": "wrld_12345",
@@ -325,89 +408,6 @@
       "avgOccupants": 19.6,
       "maxOccupants": 52,
       "minOccupants": 2
-    },
-    {
-      "id": "wrld_23456",
-      "name": "Sample World 2",
-      "authorId": "usr_22222",
-      "authorName": "Creator2",
-      "occupantReadings": [
-        {
-          "occupants": 23,
-          "timestamp": "2025-08-14T10:00:00.000Z",
-          "sourceFile": "2025-08-14.json",
-          "heat": 12,
-          "popularity": 89,
-          "hotness": 20
-        },
-        {
-          "occupants": 30,
-          "timestamp": "2025-08-15T10:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 8,
-          "popularity": 35,
-          "hotness": 16
-        },
-        {
-          "occupants": 24,
-          "timestamp": "2025-08-15T12:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 7,
-          "popularity": 28,
-          "hotness": 8
-        },
-        {
-          "occupants": 16,
-          "timestamp": "2025-08-16T10:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 6,
-          "popularity": 45,
-          "hotness": 13
-        },
-        {
-          "occupants": 31,
-          "timestamp": "2025-08-16T12:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 10,
-          "popularity": 76,
-          "hotness": 12
-        },
-        {
-          "occupants": 18,
-          "timestamp": "2025-08-16T14:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 7,
-          "popularity": 24,
-          "hotness": 12
-        },
-        {
-          "occupants": 17,
-          "timestamp": "2025-08-17T10:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 3,
-          "popularity": 37,
-          "hotness": 8
-        },
-        {
-          "occupants": 18,
-          "timestamp": "2025-08-17T12:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 6,
-          "popularity": 64,
-          "hotness": 7
-        }
-      ],
-      "totalOccupants": 177,
-      "occurrences": 8,
-      "tags": [
-        "avatar",
-        "world"
-      ],
-      "firstSeen": "2025-08-14T10:00:00.000Z",
-      "lastSeen": "2025-08-17T12:00:00.000Z",
-      "avgOccupants": 22.13,
-      "maxOccupants": 31,
-      "minOccupants": 16
     },
     {
       "id": "world1",
