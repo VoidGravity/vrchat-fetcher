@@ -1,21 +1,25 @@
 {
-  "generatedAt": "2025-08-14T15:55:13.414Z",
+  "generatedAt": "2025-08-14T16:03:04.387Z",
   "filters": {
     "minOccurrences": 1,
     "sortBy": "avgOccupants"
   },
   "summary": {
-    "totalWorlds": 11,
-    "avgOccurrences": 3.91,
-    "highestOccurrences": 10,
+    "totalWorlds": 9,
+    "totalUniqueWorlds": 9,
+    "totalOccurrences": 25,
+    "avgOccurrences": 2.78,
+    "highestOccurrences": 7,
     "lowestOccurrences": 1,
-    "avgAvgOccupants": 19.11,
+    "avgAvgOccupants": 18.72,
     "highestAvgOccupants": 70,
     "lowestAvgOccupants": 0,
+    "overallMaxOccupants": 79,
+    "overallMinOccupants": 0,
     "dataFiles": 5,
-    "totalDataPoints": 43,
-    "filteredWorlds": 11,
-    "unfilteredWorlds": 11
+    "totalDataPoints": 25,
+    "filteredWorlds": 9,
+    "unfilteredWorlds": 9
   },
   "worlds": [
     {
@@ -226,188 +230,6 @@
       "avgOccupants": 42.6,
       "maxOccupants": 48,
       "minOccupants": 32
-    },
-    {
-      "id": "wrld_23456",
-      "name": "Sample World 2",
-      "authorId": "usr_22222",
-      "authorName": "Creator2",
-      "occupantReadings": [
-        {
-          "occupants": 23,
-          "timestamp": "2025-08-14T10:00:00.000Z",
-          "sourceFile": "2025-08-14.json",
-          "heat": 12,
-          "popularity": 89,
-          "hotness": 20
-        },
-        {
-          "occupants": 30,
-          "timestamp": "2025-08-15T10:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 8,
-          "popularity": 35,
-          "hotness": 16
-        },
-        {
-          "occupants": 24,
-          "timestamp": "2025-08-15T12:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 7,
-          "popularity": 28,
-          "hotness": 8
-        },
-        {
-          "occupants": 16,
-          "timestamp": "2025-08-16T10:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 6,
-          "popularity": 45,
-          "hotness": 13
-        },
-        {
-          "occupants": 31,
-          "timestamp": "2025-08-16T12:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 10,
-          "popularity": 76,
-          "hotness": 12
-        },
-        {
-          "occupants": 18,
-          "timestamp": "2025-08-16T14:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 7,
-          "popularity": 24,
-          "hotness": 12
-        },
-        {
-          "occupants": 17,
-          "timestamp": "2025-08-17T10:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 3,
-          "popularity": 37,
-          "hotness": 8
-        },
-        {
-          "occupants": 18,
-          "timestamp": "2025-08-17T12:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 6,
-          "popularity": 64,
-          "hotness": 7
-        }
-      ],
-      "totalOccupants": 177,
-      "occurrences": 8,
-      "tags": [
-        "avatar",
-        "world"
-      ],
-      "firstSeen": "2025-08-14T10:00:00.000Z",
-      "lastSeen": "2025-08-17T12:00:00.000Z",
-      "avgOccupants": 22.13,
-      "maxOccupants": 31,
-      "minOccupants": 16
-    },
-    {
-      "id": "wrld_12345",
-      "name": "Sample World 1",
-      "authorId": "usr_11111",
-      "authorName": "Creator1",
-      "occupantReadings": [
-        {
-          "occupants": 45,
-          "timestamp": "2025-08-14T10:00:00.000Z",
-          "sourceFile": "2025-08-14.json",
-          "heat": 8,
-          "popularity": 125,
-          "hotness": 15
-        },
-        {
-          "occupants": 52,
-          "timestamp": "2025-08-14T11:00:00.000Z",
-          "sourceFile": "2025-08-14.json",
-          "heat": 9,
-          "popularity": 130,
-          "hotness": 18
-        },
-        {
-          "occupants": 18,
-          "timestamp": "2025-08-15T10:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 4,
-          "popularity": 1,
-          "hotness": 7
-        },
-        {
-          "occupants": 15,
-          "timestamp": "2025-08-15T12:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 7,
-          "popularity": 24,
-          "hotness": 8
-        },
-        {
-          "occupants": 3,
-          "timestamp": "2025-08-15T14:00:00.000Z",
-          "sourceFile": "2025-08-15.json",
-          "heat": 2,
-          "popularity": 21,
-          "hotness": 9
-        },
-        {
-          "occupants": 14,
-          "timestamp": "2025-08-16T10:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 4,
-          "popularity": 37,
-          "hotness": 10
-        },
-        {
-          "occupants": 2,
-          "timestamp": "2025-08-16T12:00:00.000Z",
-          "sourceFile": "2025-08-16.json",
-          "heat": 4,
-          "popularity": 17,
-          "hotness": 5
-        },
-        {
-          "occupants": 11,
-          "timestamp": "2025-08-17T10:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 6,
-          "popularity": 40,
-          "hotness": 5
-        },
-        {
-          "occupants": 17,
-          "timestamp": "2025-08-17T12:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 3,
-          "popularity": 25,
-          "hotness": 11
-        },
-        {
-          "occupants": 19,
-          "timestamp": "2025-08-17T14:00:00.000Z",
-          "sourceFile": "2025-08-17.json",
-          "heat": 5,
-          "popularity": 41,
-          "hotness": 6
-        }
-      ],
-      "totalOccupants": 196,
-      "occurrences": 10,
-      "tags": [
-        "game",
-        "social"
-      ],
-      "firstSeen": "2025-08-14T10:00:00.000Z",
-      "lastSeen": "2025-08-17T14:00:00.000Z",
-      "avgOccupants": 19.6,
-      "maxOccupants": 52,
-      "minOccupants": 2
     },
     {
       "id": "world1",
