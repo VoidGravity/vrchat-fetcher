@@ -29,6 +29,8 @@ class VRChatFetcher {
         this.transporter = null;
         this.lastEmailSent = null;
         this.unsentDataQueue = [];
+        this.isFirstFetch = true; // Track if this is the first ever fetch
+        this.firstFetchTime = null; // Track when first fetch happened
         
         // Authentication retry state
         this.authRetryState = {
@@ -46,6 +48,9 @@ class VRChatFetcher {
         
         // Load authentication retry state
         this.loadAuthRetryState();
+        
+        // Load first fetch state
+        this.loadFirstFetchState();
         
         // Start HTTP server for manual trigger
         this.startServer();
@@ -513,6 +518,40 @@ class VRChatFetcher {
         };
     }
 
+    /**
+     * Check if a world is a fake/sample world that should be filtered out
+     */
+    isFakeOrSampleWorld(world) {
+        if (!world || !world.name) return false;
+        
+        const name = world.name.toLowerCase();
+        const fakeWorldPatterns = [
+            'sample world',
+            'test world',
+            'fake world',
+            'demo world',
+            'placeholder world'
+        ];
+        
+        return fakeWorldPatterns.some(pattern => name.includes(pattern));
+    }
+
+    /**
+     * Filter out fake/sample worlds from an array of worlds
+     */
+    filterFakeWorlds(worlds) {
+        if (!Array.isArray(worlds)) return worlds;
+        
+        const filtered = worlds.filter(world => !this.isFakeOrSampleWorld(world));
+        const removedCount = worlds.length - filtered.length;
+        
+        if (removedCount > 0) {
+            console.log(`🧹 Filtered out ${removedCount} fake/sample worlds`);
+        }
+        
+        return filtered;
+    }
+
     getDailyFileName(date = new Date()) {
         const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
         return `${dateStr}.json`;
@@ -541,6 +580,68 @@ class VRChatFetcher {
             worlds: [],
             users: {}
         };
+    }
+
+    /**
+     * Process daily data to nest user details inside each world object
+     * This creates an enhanced analytics format for email attachments
+     */
+    createAnalyticsWithNestedUsers(dailyData) {
+        if (!dailyData.worlds || !dailyData.users) {
+            return dailyData;
+        }
+
+        const analyticsData = {
+            ...dailyData,
+            worlds: dailyData.worlds.map(world => {
+                const worldWithUser = { ...world };
+                
+                // Add user details if available
+                if (world.authorId && dailyData.users[world.authorId]) {
+                    worldWithUser.author = {
+                        ...dailyData.users[world.authorId]
+                    };
+                }
+                
+                return worldWithUser;
+            })
+        };
+
+        // Remove the separate users object since it's now nested
+        delete analyticsData.users;
+        
+        return analyticsData;
+    }
+
+    /**
+     * Purge all files in the data folder to prevent corruption and legacy data
+     */
+    purgeDataFolder() {
+        const dataFolders = ['data/scheduled', 'data/manual', 'data'];
+        let totalPurged = 0;
+
+        dataFolders.forEach(folderPath => {
+            if (fs.existsSync(folderPath)) {
+                try {
+                    const files = fs.readdirSync(folderPath);
+                    files.forEach(file => {
+                        const filePath = path.join(folderPath, file);
+                        const stat = fs.statSync(filePath);
+                        
+                        if (stat.isFile() && file !== 'fetch_log.txt') { // Keep the log file
+                            fs.unlinkSync(filePath);
+                            totalPurged++;
+                        }
+                    });
+                } catch (error) {
+                    console.warn(`Error purging ${folderPath}:`, error.message);
+                }
+            }
+        });
+
+        if (totalPurged > 0) {
+            console.log(`🧹 Purged ${totalPurged} files from data folders`);
+        }
     }
 
     saveDailyData(dailyData, date = new Date()) {
@@ -741,7 +842,9 @@ class VRChatFetcher {
             console.log('Processing world data...');
             const processedWorldsData = {};
             Object.keys(allResults).forEach(sort => {
-                processedWorldsData[sort] = allResults[sort].map(world => this.filterWorldData(world));
+                // First filter world data, then filter out fake/sample worlds
+                const filteredWorlds = allResults[sort].map(world => this.filterWorldData(world));
+                processedWorldsData[sort] = this.filterFakeWorlds(filteredWorlds);
             });
 
             // Extract unique user IDs for fetching user data
@@ -810,16 +913,32 @@ class VRChatFetcher {
                 console.log('Fetch completed with some errors - check individual results');
             }
 
-            // Send daily data email if it's a new day and data was successfully collected
+            // Send daily data email based on timing requirements
             try {
                 if (dailyData.worlds.length > 0) {
                     const currentDate = startTime.toISOString().split('T')[0];
                     const lastEmailDate = this.lastEmailSent ? this.lastEmailSent.toISOString().split('T')[0] : null;
                     
-                    // Send email if we haven't sent one today and this is scheduled fetch
-                    if (!this.manualTrigger && currentDate !== lastEmailDate) {
-                        console.log('Sending daily data email...');
-                        await this.sendDailyDataEmail(startTime);
+                    // Check if this is the first ever fetch
+                    if (this.isFirstFetch && !this.firstFetchTime) {
+                        this.firstFetchTime = new Date();
+                        this.isFirstFetch = false;
+                        this.saveFirstFetchState(); // Persist the state
+                        
+                        // Send immediate email for first fetch for testing purposes
+                        console.log('🎉 First fetch detected - sending immediate test email...');
+                        await this.sendDailyDataEmail(startTime, true); // true = isFirstFetch
+                        
+                    } else if (!this.manualTrigger && this.firstFetchTime) {
+                        // For subsequent fetches, only send after 24 hours have passed since first fetch
+                        const hoursSinceFirstFetch = (Date.now() - this.firstFetchTime.getTime()) / (1000 * 60 * 60);
+                        
+                        if (hoursSinceFirstFetch >= 24 && currentDate !== lastEmailDate) {
+                            console.log(`📅 24+ hours since first fetch - sending daily analytics email...`);
+                            await this.sendDailyDataEmail(startTime, false); // false = not first fetch
+                        } else if (hoursSinceFirstFetch < 24) {
+                            console.log(`⏰ Only ${hoursSinceFirstFetch.toFixed(1)} hours since first fetch - waiting for 24 hour mark`);
+                        }
                     }
                 }
             } catch (emailError) {
@@ -939,7 +1058,7 @@ class VRChatFetcher {
         });
     }
 
-    async sendDailyDataEmail(date = new Date()) {
+    async sendDailyDataEmail(date = new Date(), isFirstFetch = false) {
         try {
             const filename = this.getDailyFileName(date);
             const filePath = path.join('daily-data', filename);
@@ -949,31 +1068,58 @@ class VRChatFetcher {
                 return;
             }
 
-            // Load data for summary
+            // Purge data folder before processing
+            this.purgeDataFolder();
+
+            // Load data for processing
             const dailyData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            const worldsCount = dailyData.worlds?.length || 0;
-            const usersCount = Object.keys(dailyData.users || {}).length;
             
-            // Create archive
-            const archivePath = await this.createDailyDataArchive(filePath);
+            // Filter out fake/sample worlds from daily data before analytics
+            const filteredWorlds = this.filterFakeWorlds(dailyData.worlds || []);
+            const cleanDailyData = {
+                ...dailyData,
+                worlds: filteredWorlds
+            };
+
+            // Create analytics data with nested user details
+            const analyticsData = this.createAnalyticsWithNestedUsers(cleanDailyData);
+            
+            // Generate comprehensive statistics using aggregation logic
+            const WorldStatsAggregator = require('./aggregate_stats.js');
+            const aggregator = new WorldStatsAggregator({ dataDir: 'daily-data' });
+            
+            // Get current day's world data for quick stats
+            const currentDayStats = this.calculateDayStats(filteredWorlds);
+            
+            // Create enhanced analytics file
+            const analyticsFilePath = filePath.replace('.json', '_analytics.json');
+            fs.writeFileSync(analyticsFilePath, JSON.stringify(analyticsData, null, 2));
+            
+            // Create archive with analytics file
+            const archivePath = await this.createDailyDataArchive(analyticsFilePath);
             const stats = fs.statSync(archivePath);
             const sizeInMB = (stats.size / 1024 / 1024).toFixed(2);
 
-            const subject = `VRChat Daily Data - ${dailyData.date}`;
+            const worldsCount = filteredWorlds.length;
+            const usersCount = Object.keys(cleanDailyData.users || {}).length;
+            
+            // Create detailed statistics HTML
+            const statsHtml = this.createStatsHtml(currentDayStats, worldsCount, usersCount);
+            
+            const subject = isFirstFetch 
+                ? `VRChat First Fetch Data - ${cleanDailyData.date}` 
+                : `VRChat Daily Analytics - ${cleanDailyData.date}`;
+                
             const html = `
-                <h2>VRChat Daily Data Report</h2>
-                <p><strong>Date:</strong> ${dailyData.date}</p>
-                <p><strong>Last Updated:</strong> ${dailyData.lastUpdated}</p>
+                <h2>${isFirstFetch ? 'VRChat First Fetch Report' : 'VRChat Daily Analytics Report'}</h2>
+                <p><strong>Date:</strong> ${cleanDailyData.date}</p>
+                <p><strong>Last Updated:</strong> ${cleanDailyData.lastUpdated}</p>
                 
-                <h3>Summary Statistics:</h3>
-                <ul>
-                    <li><strong>Total Worlds:</strong> ${worldsCount}</li>
-                    <li><strong>Unique Users:</strong> ${usersCount}</li>
-                    <li><strong>Archive Size:</strong> ${sizeInMB} MB</li>
-                </ul>
+                ${statsHtml}
                 
-                <p>The complete data is attached as a ZIP file containing the daily JSON data.</p>
-                <p><em>Data collection timestamp: ${dailyData.lastUpdated}</em></p>
+                <p>The complete analytics data is attached as a ZIP file with user details nested within each world object.</p>
+                <p><em>Note: All fake/sample worlds have been filtered out from this report.</em></p>
+                <p><em>Data collection timestamp: ${cleanDailyData.lastUpdated}</em></p>
             `;
 
             await this.sendEmail(subject, html, [{
@@ -981,10 +1127,13 @@ class VRChatFetcher {
                 path: archivePath
             }]);
 
-            // Clean up archive file after sending
+            // Clean up temporary files
             fs.unlinkSync(archivePath);
+            if (fs.existsSync(analyticsFilePath)) {
+                fs.unlinkSync(analyticsFilePath);
+            }
             
-            console.log(`✅ Daily data email sent for ${dailyData.date}`);
+            console.log(`✅ ${isFirstFetch ? 'First fetch' : 'Daily analytics'} email sent for ${cleanDailyData.date}`);
             this.lastEmailSent = new Date();
             
         } catch (error) {
@@ -992,6 +1141,67 @@ class VRChatFetcher {
             // Add to unsent queue for retry
             this.addToUnsentQueue(date);
         }
+    }
+
+    /**
+     * Calculate statistics for current day's data
+     */
+    calculateDayStats(worlds) {
+        if (!worlds || worlds.length === 0) {
+            return {
+                totalWorlds: 0,
+                avgOccupants: 0,
+                maxOccupants: 0,
+                minOccupants: 0,
+                totalOccupants: 0,
+                worldsWithOccupants: 0
+            };
+        }
+
+        const occupantCounts = worlds.map(world => {
+            return world.occupants || world.publicOccupants || world.heat || world.popularity || 0;
+        });
+
+        const totalOccupants = occupantCounts.reduce((a, b) => a + b, 0);
+        const worldsWithOccupants = occupantCounts.filter(count => count > 0).length;
+
+        return {
+            totalWorlds: worlds.length,
+            avgOccupants: worlds.length > 0 ? Math.round((totalOccupants / worlds.length) * 100) / 100 : 0,
+            maxOccupants: worlds.length > 0 ? Math.max(...occupantCounts) : 0,
+            minOccupants: worlds.length > 0 ? Math.min(...occupantCounts) : 0,
+            totalOccupants: totalOccupants,
+            worldsWithOccupants: worldsWithOccupants
+        };
+    }
+
+    /**
+     * Create detailed statistics HTML for email body
+     */
+    createStatsHtml(dayStats, worldsCount, usersCount) {
+        return `
+            <h3>Daily Summary Statistics:</h3>
+            <ul>
+                <li><strong>Total Worlds (after filtering):</strong> ${worldsCount}</li>
+                <li><strong>Unique Users:</strong> ${usersCount}</li>
+                <li><strong>Total Occupants Across All Worlds:</strong> ${dayStats.totalOccupants}</li>
+                <li><strong>Worlds with Active Occupants:</strong> ${dayStats.worldsWithOccupants}</li>
+            </ul>
+            
+            <h3>Occupancy Statistics:</h3>
+            <ul>
+                <li><strong>Average Occupants per World:</strong> ${dayStats.avgOccupants}</li>
+                <li><strong>Maximum Occupants (Single World):</strong> ${dayStats.maxOccupants}</li>
+                <li><strong>Minimum Occupants (Single World):</strong> ${dayStats.minOccupants}</li>
+            </ul>
+            
+            <h3>Data Quality:</h3>
+            <ul>
+                <li><strong>Fake/Sample Worlds Filtered:</strong> Yes</li>
+                <li><strong>User Details:</strong> Nested within world objects</li>
+                <li><strong>Data Folder:</strong> Purged before processing</li>
+            </ul>
+        `;
     }
 
     async sendEmail(subject, html, attachments = []) {
@@ -1146,6 +1356,43 @@ class VRChatFetcher {
         console.log('✅ Auth retry state reset after successful authentication');
     }
 
+    saveFirstFetchState() {
+        try {
+            const statePath = path.join('auth-retry', 'first-fetch-state.json');
+            fs.writeFileSync(statePath, JSON.stringify({
+                isFirstFetch: this.isFirstFetch,
+                firstFetchTime: this.firstFetchTime ? this.firstFetchTime.toISOString() : null,
+                lastUpdated: new Date().toISOString()
+            }, null, 2));
+        } catch (error) {
+            console.error('Failed to save first fetch state:', error.message);
+        }
+    }
+
+    loadFirstFetchState() {
+        try {
+            const statePath = path.join('auth-retry', 'first-fetch-state.json');
+            if (fs.existsSync(statePath)) {
+                const data = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+                this.isFirstFetch = data.isFirstFetch !== false; // Default to true if not set
+                this.firstFetchTime = data.firstFetchTime ? new Date(data.firstFetchTime) : null;
+                
+                if (this.firstFetchTime) {
+                    const hoursSinceFirst = (Date.now() - this.firstFetchTime.getTime()) / (1000 * 60 * 60);
+                    console.log(`📅 Loaded first fetch state: ${this.firstFetchTime.toISOString()} (${hoursSinceFirst.toFixed(1)} hours ago)`);
+                } else {
+                    console.log('📅 No previous first fetch recorded - will treat next fetch as first');
+                }
+            } else {
+                console.log('📅 No first fetch state found - this will be treated as first fetch');
+            }
+        } catch (error) {
+            console.error('Failed to load first fetch state:', error.message);
+            this.isFirstFetch = true;
+            this.firstFetchTime = null;
+        }
+    }
+
     canAttemptAuth() {
         const now = new Date();
         
@@ -1226,3 +1473,6 @@ class VRChatFetcher {
 // Start the fetcher
 const fetcher = new VRChatFetcher();
 fetcher.start();
+
+// Export the class for testing
+module.exports = VRChatFetcher;

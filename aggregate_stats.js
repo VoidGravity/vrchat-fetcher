@@ -13,6 +13,40 @@ class WorldStatsAggregator {
     }
 
     /**
+     * Check if a world is a fake/sample world that should be filtered out
+     */
+    isFakeOrSampleWorld(world) {
+        if (!world || !world.name) return false;
+        
+        const name = world.name.toLowerCase();
+        const fakeWorldPatterns = [
+            'sample world',
+            'test world',
+            'fake world',
+            'demo world',
+            'placeholder world'
+        ];
+        
+        return fakeWorldPatterns.some(pattern => name.includes(pattern));
+    }
+
+    /**
+     * Filter out fake/sample worlds from an array of worlds
+     */
+    filterFakeWorlds(worlds) {
+        if (!Array.isArray(worlds)) return worlds;
+        
+        const filtered = worlds.filter(world => !this.isFakeOrSampleWorld(world));
+        const removedCount = worlds.length - filtered.length;
+        
+        if (removedCount > 0) {
+            console.log(`🧹 Filtered out ${removedCount} fake/sample worlds from aggregation`);
+        }
+        
+        return filtered;
+    }
+
+    /**
      * Scan all daily data files and load world data
      */
     loadAllWorldData() {
@@ -35,11 +69,14 @@ class WorldStatsAggregator {
                 const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
                 if (data.worlds && Array.isArray(data.worlds)) {
                     console.log(`Loading ${data.worlds.length} worlds from ${file}`);
-                    worldData.push(...data.worlds.map(world => ({
+                    const worldsWithMeta = data.worlds.map(world => ({
                         ...world,
                         sourceDate: data.date || file.replace('.json', ''),
                         sourceFile: file
-                    })));
+                    }));
+                    // Filter out fake/sample worlds during loading
+                    const filteredWorlds = this.filterFakeWorlds(worldsWithMeta);
+                    worldData.push(...filteredWorlds);
                 }
             } catch (error) {
                 console.warn(`Error reading ${filepath}: ${error.message}`);
@@ -136,25 +173,36 @@ class WorldStatsAggregator {
             return {
                 totalWorlds: 0,
                 avgOccurrences: 0,
+                totalOccurrences: 0,
                 highestOccurrences: 0,
                 lowestOccurrences: 0,
                 avgAvgOccupants: 0,
                 highestAvgOccupants: 0,
-                lowestAvgOccupants: 0
+                lowestAvgOccupants: 0,
+                overallMaxOccupants: 0,
+                overallMinOccupants: 0,
+                totalUniqueWorlds: 0
             };
         }
 
         const occurrences = aggregatedWorlds.map(w => w.occurrences);
         const avgOccupants = aggregatedWorlds.map(w => w.avgOccupants);
+        const allMaxOccupants = aggregatedWorlds.map(w => w.maxOccupants);
+        const allMinOccupants = aggregatedWorlds.map(w => w.minOccupants);
+        const totalOccurrences = occurrences.reduce((a, b) => a + b, 0);
 
         return {
             totalWorlds: aggregatedWorlds.length,
-            avgOccurrences: Math.round((occurrences.reduce((a, b) => a + b, 0) / occurrences.length) * 100) / 100,
+            totalUniqueWorlds: aggregatedWorlds.length,
+            totalOccurrences: totalOccurrences,
+            avgOccurrences: Math.round((totalOccurrences / aggregatedWorlds.length) * 100) / 100,
             highestOccurrences: Math.max(...occurrences),
             lowestOccurrences: Math.min(...occurrences),
             avgAvgOccupants: Math.round((avgOccupants.reduce((a, b) => a + b, 0) / avgOccupants.length) * 100) / 100,
             highestAvgOccupants: Math.max(...avgOccupants),
-            lowestAvgOccupants: Math.min(...avgOccupants)
+            lowestAvgOccupants: Math.min(...avgOccupants),
+            overallMaxOccupants: Math.max(...allMaxOccupants),
+            overallMinOccupants: Math.min(...allMinOccupants)
         };
     }
 

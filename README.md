@@ -10,7 +10,13 @@ A Node.js background worker that fetches VRChat worlds data every hour and store
 - **NEW: User data fetching** - Fetches creator details for all worlds using VRChat `/users/{userId}` API
 - **NEW: Data processing** - Removes unwanted fields and adds timestamps
 - **NEW: Rate limiting** - Smart deduplication and spacing for user API calls
-- **NEW: Email notifications** - Sends startup notifications and daily data reports via email
+- **NEW: Enhanced Analytics** - Comprehensive statistics and data quality improvements
+  - **Fake/Sample World Filtering** - Automatically filters out test/sample worlds from all data
+  - **User Detail Nesting** - Embeds user details within world objects for better organization
+  - **Enhanced Statistics** - Calculates comprehensive occupancy and occurrence metrics
+  - **24-Hour Email Delay** - Implements smart timing for email delivery (immediate first fetch, 24h delay for subsequent)
+  - **Data Folder Purging** - Prevents corruption by cleaning legacy data before processing
+- **NEW: Email notifications** - Sends startup notifications and daily analytics reports via email
 - **NEW: Robust email delivery** - Handles failures with unsent data queue and retry mechanism
 - Runs automatically every hour
 - Manual trigger endpoint
